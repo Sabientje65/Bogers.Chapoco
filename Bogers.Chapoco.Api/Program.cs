@@ -1,8 +1,6 @@
-using System.CodeDom.Compiler;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Text;
-using Medallion.Shell;
+using CliWrap;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,28 +9,19 @@ var builder = WebApplication.CreateBuilder(args);
 // mitmdump -qnr flows_local --set hardump=-
 // --script <-- what info do we get?
 
-var flowParser = new FlowParser();
-var har = await flowParser.ParseToHAR("C:\\Data\\flows_local");
+// var cls = new CancellationTokenSource();
+// var token = cls.Token;
+// cls.CancelAfter(10_000);
+// cls.CancelAfter(500);
+// cls.CancelAfter(10_000);
+// await Task.Delay(1000);
+// Console.WriteLine(token.IsCancellationRequested);
+// await Task.Delay(10_000);
+//
+// return;
 
-var file = "C:\\Data\\flows_local";
-
-var output = new StringBuilder();
-
-var cmd = Command.Run("mitmdump", "-nqr", "C:\\Data\\flows_local", "--set", "hardump=-")
-    .RedirectTo(new StringWriter(output))
-    // .RedirectStandardErrorTo(Console.Out)
-    ;
-
-// give our process 1 second to process
-await Task.Delay(1000);
-
-// check if we can detect process idle instead of waiting for 1 second
-await cmd.TrySignalAsync(CommandSignal.ControlC);
-
-await Task.Delay(500);
-// await cmd.TrySignalAsync(CommandSignal.ControlC);
-
-await Task.Delay(1500);
+var flowParser = new MitmFlowParser();
+var har = await flowParser.ParseToHAR("D:\\Data\\flows_local");
 
 return;
 
@@ -84,25 +73,55 @@ app.MapGet("/weatherforecast", () =>
 app.Run();
 
 
-class FlowParser
+class MitmFlowParser
 {
 
     public async Task<string> ParseToHAR(string path)
     {
         var har = new StringBuilder();
         var err = new StringBuilder();
+        
+        using var gracefulCls = new CancellationTokenSource();
+        var gracefulToken = gracefulCls.Token;
+        
+        // give mitmdump a default of 2500ms to produce output, after that we'll be waiting in intervals of 150ms
+        // if no output is written anymore, we gracefully terminate
+        // allowing us to capture the har output written to stdout by mitmdump
+        gracefulCls.CancelAfter(2500);
 
-        var cmd = Command.Run("mitmdump", "-nqr", path, "--set", "hardump=-")
-            .RedirectTo(new StringWriter(har))
-            .RedirectStandardErrorTo(new StringWriter(err));
+        var cmd = Cli.Wrap("mitmdump")
+            .WithArguments(["-nr", path, "--set", "hardump=-"])
+            .WithStandardOutputPipe(PipeTarget.Merge(
+                
+                PipeTarget.ToDelegate(_ =>
+                {
+                    if (gracefulCls.IsCancellationRequested)
+                    {
+                        har.Append(_);
+                        return;
+                    }
 
-        // give our process 1 second to process
-        await Task.Delay(1000);
+                    // small delay for next regular output, no more output = assumed done
+                    gracefulCls.CancelAfter(150);   
+                })
+            ))
+            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(err))
+            .WithValidation(CommandResultValidation.None);
 
-        // check if we can detect process idle instead of waiting for 1 second
-        await cmd.TrySignalAsync(CommandSignal.ControlC);
+        try
+        {
+            // never exits before our gracefulCancellationToken, so will basically always crash
+            await cmd.ExecuteAsync(
+                forcefulCancellationToken: CancellationToken.None,
+                gracefulCancellationToken: gracefulToken
+            );
 
-        return har.ToString();
+            throw new UnreachableException("Expected OperationCanceledException after graceful token cancellation");
+        }
+        catch (OperationCanceledException e)
+        {
+            if (e.CancellationToken == gracefulToken) return har.ToString();
+            throw; // bubble when something else occurred
+        }
     }
-    
 }
