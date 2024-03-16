@@ -1,0 +1,12 @@
+﻿Implement publisher and cleaner as simple background services, everything should live within the same application
+Track single 'active' pococha token, doesn't have to survive application reboots (extracting a new token is easy)
+
+Worth considering, using an in-memory eventbus for communicating between API <> publisher
+Could even go as far as to use an in-memory eventbus/queue for all internal messaging, likely makes everything more complicated than it needs to be though
+
+For now, start off with direct communication lines, keep all in memory
+^
+Writable IOptions, is this a thing? If so, we can just write to our PocochaConfiguration, track an IsValid bit or w/e and react to that in our publisher? 
+
+
+Add logging, file? -> rollover
