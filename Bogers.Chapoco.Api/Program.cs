@@ -1,6 +1,4 @@
-using System.Diagnostics;
-using System.Text;
-using CliWrap;
+using Bogers.Chapoco.Api;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,7 +19,12 @@ var builder = WebApplication.CreateBuilder(args);
 // return;
 
 var flowParser = new MitmFlowParser();
-var har = await flowParser.ParseToHAR("D:\\Data\\flows_local");
+var headerStore = new PocochaHeaderStore();
+var har = await flowParser.ParseToHar("D:\\Data\\flows_live");
+var pocochaRequests = DebugHelper.FindPocochaRequests(har);
+
+
+headerStore.UpdateFromHar(har);
 
 return;
 
@@ -71,57 +74,3 @@ app.MapGet("/weatherforecast", () =>
     .WithOpenApi();
 
 app.Run();
-
-
-class MitmFlowParser
-{
-
-    public async Task<string> ParseToHAR(string path)
-    {
-        var har = new StringBuilder();
-        var err = new StringBuilder();
-        
-        using var gracefulCls = new CancellationTokenSource();
-        var gracefulToken = gracefulCls.Token;
-        
-        // give mitmdump a default of 2500ms to produce output, after that we'll be waiting in intervals of 150ms
-        // if no output is written anymore, we gracefully terminate
-        // allowing us to capture the har output written to stdout by mitmdump
-        gracefulCls.CancelAfter(2500);
-
-        var cmd = Cli.Wrap("mitmdump")
-            .WithArguments(["-nr", path, "--set", "hardump=-"])
-            .WithStandardOutputPipe(PipeTarget.Merge(
-                
-                PipeTarget.ToDelegate(_ =>
-                {
-                    if (gracefulCls.IsCancellationRequested)
-                    {
-                        har.Append(_);
-                        return;
-                    }
-
-                    // small delay for next regular output, no more output = assumed done
-                    gracefulCls.CancelAfter(150);   
-                })
-            ))
-            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(err))
-            .WithValidation(CommandResultValidation.None);
-
-        try
-        {
-            // never exits before our gracefulCancellationToken, so will basically always crash
-            await cmd.ExecuteAsync(
-                forcefulCancellationToken: CancellationToken.None,
-                gracefulCancellationToken: gracefulToken
-            );
-
-            throw new UnreachableException("Expected OperationCanceledException after graceful token cancellation");
-        }
-        catch (OperationCanceledException e)
-        {
-            if (e.CancellationToken == gracefulToken) return har.ToString();
-            throw; // bubble when something else occurred
-        }
-    }
-}
