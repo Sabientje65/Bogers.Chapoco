@@ -2,16 +2,41 @@ using System.CodeDom.Compiler;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using Medallion.Shell;
 
 var builder = WebApplication.CreateBuilder(args);
 
 
 //mitmdump --no-server --quiet --rfile flows_local --set hardump=- 
+// mitmdump -qnr flows_local --set hardump=-
 // --script <-- what info do we get?
 
-var file = "D:\\Data\\flows";
+var flowParser = new FlowParser();
+var har = await flowParser.ParseToHAR("C:\\Data\\flows_local");
 
-var p = new MitmParser().ParseFlowsAsHar();
+var file = "C:\\Data\\flows_local";
+
+var output = new StringBuilder();
+
+var cmd = Command.Run("mitmdump", "-nqr", "C:\\Data\\flows_local", "--set", "hardump=-")
+    .RedirectTo(new StringWriter(output))
+    // .RedirectStandardErrorTo(Console.Out)
+    ;
+
+// give our process 1 second to process
+await Task.Delay(1000);
+
+// check if we can detect process idle instead of waiting for 1 second
+await cmd.TrySignalAsync(CommandSignal.ControlC);
+
+await Task.Delay(500);
+// await cmd.TrySignalAsync(CommandSignal.ControlC);
+
+await Task.Delay(1500);
+
+return;
+
+// var p = new MitmParser().ParseFlowsAsHar();
 
 
 // Parse();
@@ -59,71 +84,25 @@ app.MapGet("/weatherforecast", () =>
 app.Run();
 
 
-class MitmParser
+class FlowParser
 {
-    public MitmParser()
-    {
-        
-    }
 
-    public string ParseFlowsAsHar()
+    public async Task<string> ParseToHAR(string path)
     {
-        using var p = new Process
-        {
-            StartInfo = new ProcessStartInfo("C:\\Program Files\\mitmproxy\\bin\\mitmdump.exe")
-            {
-                Arguments = "--no-server --quiet --rfile D:/Data/flows_local --set hardump=-",
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardInput = true
-            }
-        };
-        
-        // PosixSignalRegistration.Create(PosixSignal.SIGINT, ctx => ctx.can)
-
-        
         var har = new StringBuilder();
-        p.OutputDataReceived += (_, evt) => har.Append(evt.Data);
-        
-        p.Start();
-        // p.WaitForInputIdle();
-        p.GracefullyTerminate();
-        // p.StandardInput.Close();
-        p.WaitForExit();
+        var err = new StringBuilder();
+
+        var cmd = Command.Run("mitmdump", "-nqr", path, "--set", "hardump=-")
+            .RedirectTo(new StringWriter(har))
+            .RedirectStandardErrorTo(new StringWriter(err));
+
+        // give our process 1 second to process
+        await Task.Delay(1000);
+
+        // check if we can detect process idle instead of waiting for 1 second
+        await cmd.TrySignalAsync(CommandSignal.ControlC);
 
         return har.ToString();
     }
     
-}
-
-public static class ProcessExtensions
-{
-    public static void GracefullyTerminate(this Process process)
-    {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            Windows.AttachConsole((uint)process.Id);
-            Windows.GenerateConsoleCtrlEvent(0, 0);
-            return;
-        }
-
-        Unix.kill(process.Id, 15);
-    }
-
-    private static class Windows
-    {
-        // https://github.com/devlooped/dotnet-stop/blob/main/src/Program.cs
-        [DllImport("kernel32.dll")]
-        public static extern bool GenerateConsoleCtrlEvent(uint dwCtrlEvent, uint dwProcessGroupId);
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool AttachConsole(uint dwProcessId);
-    }
-
-    private static class Unix
-    {
-        // https://github.com/dotnet/runtime/issues/59746#issuecomment-930132533
-        [DllImport("libc")]
-        public static extern int kill(int pid, int sig);
-    }
 }
