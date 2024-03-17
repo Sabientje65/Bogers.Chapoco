@@ -7,8 +7,16 @@ namespace Bogers.Chapoco.Api.Pococha;
 public class PocochaHeaderStoreUpdater : TimedBackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger _logger;
 
-    public PocochaHeaderStoreUpdater(IServiceProvider serviceProvider) => _serviceProvider = serviceProvider;
+    public PocochaHeaderStoreUpdater(
+        ILogger<PocochaHeaderStoreUpdater> logger,
+        IServiceProvider serviceProvider
+    ) : base(logger)
+    {
+        _logger = logger;
+        _serviceProvider = serviceProvider;
+    }
 
     protected override TimeSpan Interval { get; } = TimeSpan.FromSeconds(10);
     protected override async Task Run(CancellationToken stoppingToken)
@@ -24,8 +32,15 @@ public class PocochaHeaderStoreUpdater : TimedBackgroundService
         
         try
         {
-            if (!Directory.Exists(pocochaConfiguration.FlowsDirectory)) return;
-
+            _logger.LogDebug("Attempting to update pococha headers");
+            
+            // directory may need to still be created
+            if (!Directory.Exists(pocochaConfiguration.FlowsDirectory))
+            {
+                _logger.LogWarning("Failed to update pococha headers, no flows directory found at {FlowsDirectory}", pocochaConfiguration.FlowsDirectory);
+                return;
+            }
+            
             // filenames are assumed to be sortable by date
             var flowParser = new MitmFlowParser();
             var files = Directory.EnumerateFiles(pocochaConfiguration.FlowsDirectory)
@@ -44,6 +59,7 @@ public class PocochaHeaderStoreUpdater : TimedBackgroundService
                         .ParseToHar(flowFile); // <-- add ability to filter flows (only requests to pococha?)
                     didUpdate = pocochaHeaderStore.UpdateFromHar(har) || didUpdate;
                     
+                    
                     // delete processed
                     if (!DebugHelper.IsDebugMode) File.Delete(flowFile); // <-- dry mode?
                     else { /* log */ }
@@ -51,9 +67,14 @@ public class PocochaHeaderStoreUpdater : TimedBackgroundService
 
                     // send pushover notification on successful update?
                 }
+                catch (ApplicationException e) {
+                    _logger.LogWarning(e, "Failed to parse flowfile to har: {FlowFile}", flowFile);
+                    
+                    // should likely still attempt to delete, lets just see how this plays out in production
+                }
                 catch (Exception e)
                 {
-                    // log
+                    _logger.LogWarning(e, "Failed to process flow file with unknown error: {FlowFile}", flowFile);
                 }
             }
             
@@ -64,6 +85,8 @@ public class PocochaHeaderStoreUpdater : TimedBackgroundService
                 var authenticatedLabel = await pococha.IsAuthenticated() ?
                     "Authenticated" :
                     "Unauthenticated";
+                
+                _logger.LogInformation("Successfully updated pococha headers, status: {Label}", authenticatedLabel);
                 
                 await pushover.SendMessage(
                     PushoverMessage.Text("Pococha token updated", $"Current authentication status: {authenticatedLabel}")    

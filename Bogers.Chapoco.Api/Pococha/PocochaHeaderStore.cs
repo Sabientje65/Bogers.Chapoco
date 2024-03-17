@@ -11,13 +11,20 @@ public class PocochaHeaderStore
     private static Regex PocochaApiUrlExp = new Regex("^https?://api.pococha.com");
     
     private readonly object _mutex = new object();
+    private readonly ILogger _logger;
+    
     public DateTime LastUpdate { get; private set; }
 
     public string? CurrentToken => _headers.TryGetValue(TokenHeader, out var token) ? token : null; 
     public bool IsValid => !String.IsNullOrEmpty(CurrentToken);
     
     private IDictionary<string, string> _headers = new Dictionary<string, string>();
-    
+
+    public PocochaHeaderStore(ILogger<PocochaHeaderStore> logger)
+    {
+        _logger = logger;
+    }
+
     public void Invalidate()
     {
         var now = DateTime.UtcNow;
@@ -27,6 +34,7 @@ public class PocochaHeaderStore
         {
             if (now > LastUpdate)
             {
+                _logger.LogDebug("Invalidating pococha headers");
                 _headers = new Dictionary<string, string>();   
             }
             
@@ -62,6 +70,7 @@ public class PocochaHeaderStore
         // override at once to prevent off-chance of update taking place during read
         lock (_mutex)
         {
+            _logger.LogDebug("Updating pococha headers");
             LastUpdate = DateTime.UtcNow;
             _headers = headersDict;
         }

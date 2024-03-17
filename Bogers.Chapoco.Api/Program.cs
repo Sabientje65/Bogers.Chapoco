@@ -13,6 +13,9 @@ builder.Services
     .AddHostedService<PocochaAuthenticationStateMonitor>()
     .AddHostedService<PocochaLiveMonitor>();
 
+builder.Logging
+    .AddConsole();
+
 
 builder.Services.AddOptions<PushoverConfiguration>()
     .BindConfiguration("Pushover");
@@ -36,19 +39,7 @@ builder.Services.AddOptions<PocochaConfiguration>()
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-// if (app.Environment.IsDevelopment())
-// {
-    // app.UseSwagger();
-    // app.UseSwaggerUI();
-// }
-
 app.UseHttpsRedirection();
-
-// var summaries = new[]
-// {
-//     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-// };
 
 app.MapGet("/debug/notification", async (
     [FromServices] PushoverClient pushover,
@@ -59,20 +50,20 @@ app.MapGet("/debug/notification", async (
     return new { status = "ok" };
 });
 
-app.MapGet("/weatherforecast", () =>
-    {
-        return "ok";
-        // var forecast = Enumerable.Range(1, 5).Select(index =>
-        //         new WeatherForecast
-        //         (
-        //             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-        //             Random.Shared.Next(-20, 55),
-        //             summaries[Random.Shared.Next(summaries.Length)]
-        //         ))
-        //     .ToArray();
-        // return forecast;
-    })
-    .WithName("GetWeatherForecast")
-    .WithOpenApi();
+// app.MapGet("/weatherforecast", () =>
+//     {
+//         return "ok";
+//         // var forecast = Enumerable.Range(1, 5).Select(index =>
+//         //         new WeatherForecast
+//         //         (
+//         //             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+//         //             Random.Shared.Next(-20, 55),
+//         //             summaries[Random.Shared.Next(summaries.Length)]
+//         //         ))
+//         //     .ToArray();
+//         // return forecast;
+//     })
+//     .WithName("GetWeatherForecast")
+//     .WithOpenApi();
 
 app.Run();

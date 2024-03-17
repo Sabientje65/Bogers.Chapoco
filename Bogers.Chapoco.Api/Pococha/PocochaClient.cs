@@ -1,11 +1,14 @@
 ﻿using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace Bogers.Chapoco.Api.Pococha;
 
 public class PocochaClient
 {
+    private readonly ILogger _logger;
+    
     private readonly HttpClient _client;
     private readonly PocochaHeaderStore _headerStore;
 
@@ -15,10 +18,13 @@ public class PocochaClient
     };
 
     public PocochaClient(
-        IHttpClientFactory httpClientFactory,
+        ILogger<PocochaClient> logger,
+        IHttpClientFactory httpClientFactory, 
         PocochaHeaderStore headerStore
     )
     {
+        _logger = logger;
+        
         _headerStore = headerStore;
         // _client = new HttpClient { BaseAddress = new Uri("https://api.pococha.com") };
         _client = httpClientFactory.CreateClient("pococha");
@@ -122,11 +128,35 @@ public class PocochaClient
         
         var response = await _client.SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken);
         
+        _logger.LogInformation("Received statuscode {StatusCode} from request to {Url}", response.StatusCode, request.RequestUri);
+        
         // not authenticated anymore -> error
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
+            response.Dispose();
             _headerStore.Invalidate();
             ThrowIfTokenInvalid();
+        }
+        
+        // for other errors, log and bubble
+        if (!response.IsSuccessStatusCode)
+        {
+            string content = String.Empty;
+            try
+            {
+                content = (await ReadJsonContent<JsonNode>(response)).ToString();
+            } catch { /* Ignore, no json body */}
+            
+            response.Dispose();
+            
+            _logger.LogError(
+                "Request to {Url} failed with statuscode {StatusCode} and message {Message}, see body for more information",
+                request.RequestUri,
+                response.StatusCode,
+                content
+            );
+
+            response.EnsureSuccessStatusCode();
         }
 
         return response;

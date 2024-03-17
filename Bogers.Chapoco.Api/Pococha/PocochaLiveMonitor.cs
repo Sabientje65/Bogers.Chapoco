@@ -4,10 +4,16 @@ namespace Bogers.Chapoco.Api.Pococha;
 
 public class PocochaLiveMonitor : TimedBackgroundService
 {
+    private readonly ILogger _logger;
+    
     private readonly IServiceProvider _serviceProvider;
     private readonly ISet<int> _previous = new HashSet<int>();
 
-    public PocochaLiveMonitor(IServiceProvider serviceProvider) => _serviceProvider = serviceProvider;
+    public PocochaLiveMonitor(ILogger<PocochaLiveMonitor> logger, IServiceProvider serviceProvider) : base(logger)
+    {
+        _serviceProvider = serviceProvider;
+        _logger = logger;
+    }
 
     protected override TimeSpan Interval { get; } = TimeSpan.FromMinutes(1);
     
@@ -20,6 +26,8 @@ public class PocochaLiveMonitor : TimedBackgroundService
         
         try
         {
+            _logger.LogInformation("Checking live status of following users");
+            
             var currentlyLive = await pococha.GetCurrentlyLive(stoppingToken);
             var currentlyLiveUsers = currentlyLive.LiveResources
                 .Select(x => x.Live.User.Id)
@@ -28,6 +36,8 @@ public class PocochaLiveMonitor : TimedBackgroundService
             var newLiveUsers = currentlyLiveUsers
                 .Except(_previous)
                 .ToArray();
+            
+            _logger.LogInformation("Found {NewLiveUsers} new live users", newLiveUsers);
                 
             // clear previous run, we'll replace it with our current collection
             _previous.Clear();
@@ -49,9 +59,10 @@ public class PocochaLiveMonitor : TimedBackgroundService
         {
             // swallow
         }
-        catch (Exception)
+        catch (Exception e)
         {
             // log
+            _logger.LogWarning(e, "Failed to retrieve live users");
         }
     }
 }

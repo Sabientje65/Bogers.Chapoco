@@ -15,7 +15,7 @@ class MitmFlowParser
     /// <param name="path">Path to file to parse</param>
     /// <returns></returns>
     /// <exception cref="FileNotFoundException">Thrown when flow file could not be found</exception>
-    /// <exception cref="OperationCanceledException">Thrown when parsing failed (interrupted)</exception>
+    /// <exception cref="ApplicationException">Thrown when parsing failed (interrupted)</exception>
     public async Task<JsonNode> ParseToHar(string path)
     {
         // todo: add ability to add a flowfilter
@@ -69,7 +69,7 @@ class MitmFlowParser
             var err = errBuilder.ToString();
             if (!String.IsNullOrEmpty(err)) throw new ApplicationException($"mitmdump failed: {errBuilder}");
             
-            throw; // bubble when something else occurred
+            throw new ApplicationException("mitm dump failed", e); // bubble when something else occurred
         }
     }
     

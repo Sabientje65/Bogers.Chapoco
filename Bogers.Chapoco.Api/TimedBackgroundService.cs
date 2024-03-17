@@ -1,20 +1,41 @@
 ﻿namespace Bogers.Chapoco.Api;
 
 /// <summary>
-/// Baseclass for background services running on an interval
+/// Baseclass providing scheduling for background services running on an interval
 /// </summary>
 public abstract class TimedBackgroundService : BackgroundService
 {
+    private readonly ILogger _logger;
+
+    protected TimedBackgroundService(ILogger logger) => _logger = logger;
+
     protected abstract TimeSpan Interval { get; }
     
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(Interval);
-
-        await Run(stoppingToken);
-        while (await timer.WaitForNextTickAsync(stoppingToken))
+        // autostart first run
+        try
         {
             await Run(stoppingToken);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Unhandled exception while running background service: {ServiceType}", GetType().FullName);
+        }
+        
+        // then schedule periodically
+        using var timer = new PeriodicTimer(Interval);
+        
+        while (await timer.WaitForNextTickAsync(stoppingToken))
+        {
+            try
+            {
+                await Run(stoppingToken);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Unhandled exception while running background service: {ServiceType}", GetType().FullName);
+            }
         }
     }
 

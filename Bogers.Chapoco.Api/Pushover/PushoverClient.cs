@@ -6,6 +6,8 @@ namespace Bogers.Chapoco.Api.Pushover;
 
 public class PushoverClient
 {
+    private readonly ILogger _logger;
+    
     private readonly HttpClient _client;
     private readonly PushoverConfiguration _pushoverConfiguration;
     
@@ -16,22 +18,30 @@ public class PushoverClient
     };
     
     public PushoverClient(
-        IHttpClientFactory httpClientFactory,
+        ILogger<PushoverClient> logger,
+        IHttpClientFactory httpClientFactory, 
         IOptions<PushoverConfiguration> configuration
     )
     {
+        _logger = logger;
         _client = httpClientFactory.CreateClient("pushover");
         _pushoverConfiguration = configuration.Value;
         
         _client.BaseAddress = new Uri("https://api.pushover.net");
     }
 
+    /// <summary>
+    /// Send a notification via pushover
+    /// </summary>
+    /// <param name="message">Message to send</param>
     public async Task SendMessage(PushoverMessage message)
     {
         // log message? trace invocation?
         if (!_pushoverConfiguration.Enabled) return;
         
         var payload = JsonSerializer.SerializeToNode(message, PushoverJsonSerializerOptions);
+        _logger.LogDebug("Sending message: {Payload}", payload);
+        
         payload["token"] = _pushoverConfiguration.AppToken;
         payload["user"] = _pushoverConfiguration.UserToken;
         
@@ -39,11 +49,12 @@ public class PushoverClient
         try
         {
             ThrowIfConfigurationInvalid();
-            await _client.PostAsJsonAsync("/1/messages.json", payload);
+            using var res = await _client.PostAsJsonAsync("/1/messages.json", payload);
+            res.EnsureSuccessStatusCode();
         }
         catch (Exception e)
         {
-            // log
+            _logger.LogWarning(e, "Failed to send pushover message");
         }
     }
 
