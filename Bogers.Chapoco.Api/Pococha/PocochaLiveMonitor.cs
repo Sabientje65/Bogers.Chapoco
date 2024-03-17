@@ -9,7 +9,8 @@ public class PocochaLiveMonitor : TimedBackgroundService
 
     public PocochaLiveMonitor(IServiceProvider serviceProvider) => _serviceProvider = serviceProvider;
 
-    protected override TimeSpan Period { get; } = TimeSpan.FromMinutes(1);
+    protected override TimeSpan Interval { get; } = TimeSpan.FromMinutes(1);
+    
     protected override async Task Run(CancellationToken stoppingToken)
     {
         using var serviceScope = _serviceProvider.CreateScope();
@@ -19,7 +20,7 @@ public class PocochaLiveMonitor : TimedBackgroundService
         
         try
         {
-            var currentlyLive = await pococha.GetCurrentlyLive();
+            var currentlyLive = await pococha.GetCurrentlyLive(stoppingToken);
             var currentlyLiveUsers = currentlyLive.LiveResources
                 .Select(x => x.Live.User.Id)
                 .ToHashSet();

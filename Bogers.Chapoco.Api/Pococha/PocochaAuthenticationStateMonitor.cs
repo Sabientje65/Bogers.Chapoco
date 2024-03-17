@@ -9,7 +9,7 @@ public class PocochaAuthenticationStateMonitor : TimedBackgroundService
 
     public PocochaAuthenticationStateMonitor(IServiceProvider serviceProvider) => _serviceProvider = serviceProvider;
 
-    protected override TimeSpan Period { get; } = TimeSpan.FromMinutes(1);
+    protected override TimeSpan Interval { get; } = TimeSpan.FromMinutes(1);
 
     protected override async Task Run(CancellationToken stoppingToken)
     {

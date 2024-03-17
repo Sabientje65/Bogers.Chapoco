@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.IO.Compression;
+using System.Net;
 using System.Text.Json;
 
 namespace Bogers.Chapoco.Api.Pococha;
@@ -35,7 +36,7 @@ public class PocochaClient
         try
         {
             ThrowIfTokenInvalid();
-            using var msg = BuildRequestMessage(HttpMethod.Get, "/v1/app_launch");
+            using var msg = BuildRequestMessage(HttpMethod.Get, "/v1/my_profile");
             (await Send(msg)).Dispose();
             return true;
         }
@@ -66,7 +67,6 @@ public class PocochaClient
         //  page: number
         ///v5/lives/followings
         
-        // await 
         return await ReadJsonContent<LivesResource>(res);
     }
 
@@ -95,12 +95,20 @@ public class PocochaClient
 
     private async Task<T> ReadJsonContent<T>(HttpResponseMessage res)
     {
-        // todo: use snake_case json convert
-        
         return await JsonSerializer.DeserializeAsync<T>(
-            await res.Content.ReadAsStreamAsync(),
-            PocochaJsonSerializerOptions       
+            await AsJsonDeserializableStream(),
+            PocochaJsonSerializerOptions    
         );
+
+        async Task<Stream> AsJsonDeserializableStream()
+        {
+            var contentStream = await res.Content.ReadAsStreamAsync();
+            if (res.Content.Headers.ContentEncoding.Contains("gzip"))
+            {
+                return new GZipStream(contentStream, CompressionMode.Decompress);
+            }
+            return contentStream;
+        }
     }
 
 
@@ -112,7 +120,7 @@ public class PocochaClient
         // log requests made + statuscode responses, level = info
         // include header level = debug
         
-        var response = await _client.SendAsync(request, cancellationToken);
+        var response = await _client.SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken);
         
         // not authenticated anymore -> error
         if (response.StatusCode == HttpStatusCode.Unauthorized)
@@ -122,8 +130,6 @@ public class PocochaClient
         }
 
         return response;
-
-        // should handle invalidation here -> 401
     }
 }
 

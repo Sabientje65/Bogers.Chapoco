@@ -10,7 +10,7 @@ public class PocochaHeaderStoreUpdater : TimedBackgroundService
 
     public PocochaHeaderStoreUpdater(IServiceProvider serviceProvider) => _serviceProvider = serviceProvider;
 
-    protected override TimeSpan Period { get; } = TimeSpan.FromMinutes(1);
+    protected override TimeSpan Interval { get; } = TimeSpan.FromSeconds(10);
     protected override async Task Run(CancellationToken stoppingToken)
     {
         // should migrate to filesystemwatcher
@@ -32,6 +32,7 @@ public class PocochaHeaderStoreUpdater : TimedBackgroundService
                 .OrderBy(f => f);
 
             var didUpdate = false;
+            var wasValid = pocochaHeaderStore.IsValid;
 
             foreach (var flowFile in files)
             {
@@ -58,7 +59,7 @@ public class PocochaHeaderStoreUpdater : TimedBackgroundService
             
             // log updated status
 
-            if (didUpdate)
+            if (didUpdate && !wasValid)
             {
                 var authenticatedLabel = await pococha.IsAuthenticated() ?
                     "Authenticated" :

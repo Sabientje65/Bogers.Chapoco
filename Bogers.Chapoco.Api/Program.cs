@@ -9,9 +9,10 @@ builder.Services
     .AddSingleton<PocochaHeaderStore>()
     .AddScoped<PocochaClient>()
     .AddScoped<PushoverClient>()
+    .AddHostedService<PocochaHeaderStoreUpdater>()
     // .AddHostedService<PocochaAuthenticationStateMonitor>()
-    .AddHostedService<PocochaHeaderStoreUpdater>();
-    // .AddHostedService<PocochaLiveMonitor>();
+    .AddHostedService<PocochaLiveMonitor>()
+    ;
 
 
 builder.Services.AddOptions<PushoverConfiguration>()

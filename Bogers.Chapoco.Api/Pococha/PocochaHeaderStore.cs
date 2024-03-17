@@ -78,6 +78,7 @@ public class PocochaHeaderStore
         {
             // skip content-type etc. those are determined by our consumer
             if (name.Equals("content-type", StringComparison.OrdinalIgnoreCase)) continue;
+            if (name.Equals("content-length", StringComparison.OrdinalIgnoreCase)) continue;
             
             request.Headers.TryAddWithoutValidation(name, value);
         }

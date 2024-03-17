@@ -10,6 +10,6 @@ public class PocochaConfiguration
     public string FlowsDirectory
     {
         get => _flowsDirectory;
-        set => PathHelper.Normalize(value);
+        set => _flowsDirectory = PathHelper.Normalize(value);
     }
 }

@@ -8,6 +8,6 @@ public class PathHelper
     /// <param name="path">Path to normalize</param>
     /// <returns>Normalized path</returns>
     public static string Normalize(string path) => path
-        .Replace('/', Path.PathSeparator)
-        .Replace('\\', Path.PathSeparator);
+        .Replace('/', Path.DirectorySeparatorChar)
+        .Replace('\\', Path.DirectorySeparatorChar);
 }
