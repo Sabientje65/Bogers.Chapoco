@@ -5,7 +5,7 @@ namespace Bogers.Chapoco.Api.Pococha;
 public class PocochaAuthenticationStateMonitor : TimedBackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private bool _previous = true;
+    private bool _previous;
 
     public PocochaAuthenticationStateMonitor(IServiceProvider serviceProvider) => _serviceProvider = serviceProvider;
 
