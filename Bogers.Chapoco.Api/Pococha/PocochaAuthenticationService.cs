@@ -100,6 +100,8 @@ public class PocochaAuthenticationService : TimedBackgroundService
 
             try
             {
+                _logger.LogInformation("Attempting to update pococha headers from flow file: {FlowFile}", flowFile);
+                
                 var har = await flowParser
                     .ParseToHar(flowFile); // <-- add ability to filter flows (only requests to pococha?)
                 pocochaHeaderStore.UpdateFromHar(har);
