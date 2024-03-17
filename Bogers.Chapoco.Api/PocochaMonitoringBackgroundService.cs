@@ -53,6 +53,7 @@ public class PocochaMonitoringBackgroundService : BackgroundService
             _pushover
         );
         
+        // maybe run using a filewatcher?
         var timer = new Timer(
             _ => flowMonitor.Run().Wait()
         );

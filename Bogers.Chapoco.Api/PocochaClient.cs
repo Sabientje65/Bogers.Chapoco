@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace Bogers.Chapoco.Api;
 
@@ -8,6 +7,11 @@ public class PocochaClient
 {
     private readonly HttpClient _client;
     private readonly PocochaHeaderStore _headerStore;
+
+    private static readonly JsonSerializerOptions PocochaJsonSerializerOptions = new JsonSerializerOptions()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+    };
 
     public PocochaClient(
         IHttpClientFactory httpClientFactory,
@@ -18,22 +22,6 @@ public class PocochaClient
         // _client = new HttpClient { BaseAddress = new Uri("https://api.pococha.com") };
         _client = httpClientFactory.CreateClient();
         _client.BaseAddress = new Uri("https://api.pococha.com");
-
-
-        // should we do this on a per-client basis, or on a per-method invocation basis?
-        // try
-        // {
-        //     foreach (var (name, value) in headerStore.Read())
-        //     {
-        //         _client.DefaultRequestHeaders.TryAddWithoutValidation(name, value);
-        //     }
-        // }
-        // catch(Exception e)
-        // {
-        //     // log
-        // }
-
-        // _client.DefaultRequestHeaders
     }
 
     /// <summary>
@@ -57,6 +45,12 @@ public class PocochaClient
         }
     }
 
+    /// <summary>
+    /// Retrieve of a list of followed accounts currently live
+    /// </summary>
+    /// <param name="token">Cancellation token</param>
+    /// <returns>List of liveresources</returns>
+    /// <exception cref="TokenExpiredException">Thrown when pococha token is expired</exception>
     public async Task<LivesResource> GetCurrentlyLive(CancellationToken token = default)
     {
         ThrowIfTokenInvalid();
@@ -76,34 +70,10 @@ public class PocochaClient
         return await ReadJsonContent<LivesResource>(res);
     }
 
-    // private async Task<T> Get<T>(
-    //     string uri
-    // )
-    // {
-    //     
-    // }
-
     private void ThrowIfTokenInvalid()
     {
         if (!_headerStore.IsValid) throw new TokenExpiredException();
     }
-
-    // private async Task<T> Post<T>(
-    //     string uri,
-    //     object content,
-    //     CancellationToken token = default
-    // )
-    // {
-    //     using var msg = new HttpRequestMessage(HttpMethod.Post, uri);
-    //     msg.Content = new StringContent(JsonSerializer.Serialize(content));
-    //     msg.Headers.TryAddWithoutValidation("Content-Type", "application/json");
-    //     using var res = await Send(msg, token);
-    //     
-    //     if (res.StatusCode == HttpStatusCode.Unauthorized) throw new TokenExpiredException();
-    //     // should we add the ability to log our response bodies? -> level = debug
-    //     
-    //     return await JsonSerializer.DeserializeAsync<T>(await msg.Content.ReadAsStreamAsync());
-    // }
     
     private HttpRequestMessage BuildRequestMessage(
         HttpMethod method, 
@@ -125,8 +95,11 @@ public class PocochaClient
 
     private async Task<T> ReadJsonContent<T>(HttpResponseMessage res)
     {
+        // todo: use snake_case json convert
+        
         return await JsonSerializer.DeserializeAsync<T>(
-            await res.Content.ReadAsStreamAsync()
+            await res.Content.ReadAsStreamAsync(),
+            PocochaJsonSerializerOptions       
         );
     }
 
@@ -152,13 +125,6 @@ public class PocochaClient
 
         // should handle invalidation here -> 401
     }
-    
-    // public Task Get()
-    // {
-    //     _client.GetAsync(new )
-    // }
-    
-    
 }
 
 public class TokenExpiredException : InvalidOperationException
@@ -170,13 +136,13 @@ public class TokenExpiredException : InvalidOperationException
 
 public class LivesResource
 {
-    [JsonPropertyName("live_resources")]
+    // [JsonPropertyName("live_resources")]
     public LiveResource[] LiveResources { get; set; }
 }
 
 public class LiveResource
 {
-    [JsonPropertyName("live_edge")]
+    // [JsonPropertyName("live_edge")]
     public LiveEdge LiveEdge { get; set; }
 
     public Live Live { get; set; }
@@ -184,7 +150,7 @@ public class LiveResource
 
 public class Live
 {
-    [JsonPropertyName("thumbnail_image_url")]
+    // [JsonPropertyName("thumbnail_image_url")]
     public string ThumbnailImageUrl { get; set; }
     
     public string Title { get; set; }
@@ -203,7 +169,7 @@ public class LiveEdge
 
 public class Ivs
 {
-    [JsonPropertyName("playback_url")]
+    // [JsonPropertyName("playback_url")]
     public string PlaybackUrl { get; set; }
 }
 
@@ -219,10 +185,8 @@ public class User
     public int Id { get; set; }
 
     public string Name { get; set; }
-
-    [JsonPropertyName("profile_image_url")]
+    
     public string ProfileImageUrl { get; set; }
 
-    [JsonPropertyName("thumbnail_image_url")]
     public string ThumbnailImageUrl { get; set; }
 }
