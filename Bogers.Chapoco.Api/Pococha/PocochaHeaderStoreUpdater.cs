@@ -62,6 +62,7 @@ public class PocochaHeaderStoreUpdater : TimedBackgroundService
                         .ParseToHar(flowFile); // <-- add ability to filter flows (only requests to pococha?)
                     didUpdate = pocochaHeaderStore.UpdateFromHar(har) || didUpdate;
                     
+                    _logger.LogInformation("Cleaning flow file: {FlowFile}", flowFile);
                     
                     // delete processed
                     if (!DebugHelper.IsDebugMode) File.Delete(flowFile); // <-- dry mode?
@@ -85,15 +86,20 @@ public class PocochaHeaderStoreUpdater : TimedBackgroundService
 
             if (didUpdate && !wasValid)
             {
-                var authenticatedLabel = await pococha.IsAuthenticated() ?
+                var isValid = await pococha.IsAuthenticated();
+                var authenticatedLabel = isValid ?
                     "Authenticated" :
                     "Unauthenticated";
                 
                 _logger.LogInformation("Successfully updated pococha headers, status: {Label}", authenticatedLabel);
                 
-                await pushover.SendMessage(
-                    PushoverMessage.Text("Pococha token updated", $"Current authentication status: {authenticatedLabel}")    
-                );
+                // only send for 'became authenticated', should merge with auth state monitor, one place to track + update
+                if (isValid)
+                {
+                    await pushover.SendMessage(
+                        PushoverMessage.Text("Pococha token updated", $"Current authentication status: {authenticatedLabel}")    
+                    );   
+                }
             }
         }
         catch (Exception e)

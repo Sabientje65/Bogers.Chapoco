@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Bogers.Chapoco.Api.Pococha;
 using Bogers.Chapoco.Api.Pushover;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +13,8 @@ builder.Services
     .AddScoped<PushoverClient>()
     .AddHostedService<PocochaHeaderStoreUpdater>()
     .AddHostedService<PocochaAuthenticationStateMonitor>()
-    .AddHostedService<PocochaLiveMonitor>();
+    .AddHostedService<PocochaLiveMonitor>()
+    ;
 
 builder.Logging
     .AddConsole();
@@ -22,26 +25,11 @@ builder.Services.AddOptions<PushoverConfiguration>()
 builder.Services.AddOptions<PocochaConfiguration>()
     .BindConfiguration("Pococha");
 
-// builder.Configuration.AddJsonFile("appsettings.json");
-
-// var p = new MitmParser().ParseFlowsAsHar();
-
-
-// Parse();
-// return;
-
-
-
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-// builder.Services.AddEndpointsApiExplorer();
-// builder.Services.AddSwaggerGen();
-
 var app = builder.Build();
 
 app.UseHttpsRedirection();
 
-app.MapGet("/debug/notification", async (
+app.MapGet("/api/debug/notification", async (
     [FromServices] PushoverClient pushover,
     [FromQuery] string message
 ) =>
@@ -50,20 +38,25 @@ app.MapGet("/debug/notification", async (
     return new { status = "ok" };
 });
 
-// app.MapGet("/weatherforecast", () =>
-//     {
-//         return "ok";
-//         // var forecast = Enumerable.Range(1, 5).Select(index =>
-//         //         new WeatherForecast
-//         //         (
-//         //             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-//         //             Random.Shared.Next(-20, 55),
-//         //             summaries[Random.Shared.Next(summaries.Length)]
-//         //         ))
-//         //     .ToArray();
-//         // return forecast;
-//     })
-//     .WithName("GetWeatherForecast")
-//     .WithOpenApi();
+app.MapMethods(
+    "/api/pococha/forward/{**path}",
+    [HttpMethod.Get.Method, HttpMethod.Post.Method, HttpMethod.Delete.Method],
+    async (
+        HttpContext context, 
+        [FromServices] PocochaClient pococha,
+        [FromRoute] string path
+    ) =>
+    {
+        return await pococha.Proxy(
+            context.Request.Method,
+            $"/{path}{context.Request.QueryString}",
+            
+            // should just forwarded stream as-is
+            context.Request.HasJsonContentType() ?
+                JsonSerializer.DeserializeAsync<JsonNode>(context.Request.Body) :
+                null
+        );
+    }
+);
 
 app.Run();

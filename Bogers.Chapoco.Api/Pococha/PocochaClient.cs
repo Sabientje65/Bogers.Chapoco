@@ -79,6 +79,29 @@ public class PocochaClient
         return await ReadJsonContent<LivesResource>(res);
     }
 
+    /// <summary>
+    /// Invoke the given endpoint directly, basically acting as a proxy for pococha calls
+    /// </summary>
+    /// <param name="method">HTTP method</param>
+    /// <param name="uri">URI, expected to include querystring parameters</param>
+    /// <param name="body">Optional request body</param>
+    /// <returns>Raw pococha response</returns>
+    public async Task<JsonNode> Proxy(
+        string method,
+        string uri,
+        object? body = null
+    )
+    {
+        using var msg = BuildRequestMessage(
+            HttpMethod.Parse(method),
+            uri,
+            body
+        );
+
+        using var res = await Send(msg);
+        return await ReadJsonContent<JsonNode>(res);
+    }
+
     private void ThrowIfTokenInvalid()
     {
         if (!_headerStore.IsValid) throw new TokenExpiredException();
