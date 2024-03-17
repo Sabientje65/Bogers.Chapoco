@@ -13,9 +13,19 @@ public class PocochaHeaderStore
     private readonly object _mutex = new object();
     private readonly ILogger _logger;
     
+    /// <summary>
+    /// Time of last header update
+    /// </summary>
     public DateTime LastUpdate { get; private set; }
 
-    public string? CurrentToken => _headers.TryGetValue(TokenHeader, out var token) ? token : null; 
+    /// <summary>
+    /// Active pococha token
+    /// </summary>
+    public string? CurrentToken => _headers.TryGetValue(TokenHeader, out var token) ? token : null;
+    
+    /// <summary>
+    /// Indicates whether the current headers are usable or not, invalidation should happen after pococha sends an unauthenticated response
+    /// </summary>
     public bool IsValid => !String.IsNullOrEmpty(CurrentToken);
     
     private IDictionary<string, string> _headers = new Dictionary<string, string>();
@@ -25,6 +35,9 @@ public class PocochaHeaderStore
         _logger = logger;
     }
 
+    /// <summary>
+    /// Invalidate the current set of headers by disposing them
+    /// </summary>
     public void Invalidate()
     {
         var now = DateTime.UtcNow;
@@ -38,11 +51,20 @@ public class PocochaHeaderStore
                 _headers = new Dictionary<string, string>();   
             }
             
+            LastUpdate = DateTime.UtcNow;
+            
             // should we fire an event on invalidation? _headerStore.OnInvalidated += (...)
             // makes it easier to detect invalidation the moment it happens
         }
     }
     
+    /// <summary>
+    /// Update the current headers with the most recent valid pococha request in the given <see cref="har"/>
+    ///
+    /// For more information, see: <see cref="http://www.softwareishard.com/blog/har-12-spec"/>
+    /// </summary>
+    /// <param name="har">json shaped as har</param>
+    /// <returns>True when an update took place</returns>
     public bool UpdateFromHar(JsonNode har)
     {
         // for reference, see: http://www.softwareishard.com/blog/har-12-spec
@@ -78,6 +100,10 @@ public class PocochaHeaderStore
         return true;
     }
 
+    /// <summary>
+    /// Write the current set of headers to the given request
+    /// </summary>
+    /// <param name="request">Request to write headers to</param>
     public void WriteTo(HttpRequestMessage request)
     {
         IDictionary<string, string> headers;

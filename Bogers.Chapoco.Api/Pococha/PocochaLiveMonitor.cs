@@ -2,6 +2,9 @@
 
 namespace Bogers.Chapoco.Api.Pococha;
 
+/// <summary>
+/// Service for monitoring current followed users live status, sends alerts when a new user goes live
+/// </summary>
 public class PocochaLiveMonitor : TimedBackgroundService
 {
     private readonly ILogger _logger;

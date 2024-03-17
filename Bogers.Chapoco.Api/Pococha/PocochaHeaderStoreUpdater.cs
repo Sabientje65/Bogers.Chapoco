@@ -4,6 +4,9 @@ using Microsoft.Extensions.Options;
 
 namespace Bogers.Chapoco.Api.Pococha;
 
+/// <summary>
+/// Store tracking current set of pococha headers, headers are automatically appended when sending requests to pococha
+/// </summary>
 public class PocochaHeaderStoreUpdater : TimedBackgroundService
 {
     private readonly IServiceProvider _serviceProvider;

@@ -2,6 +2,9 @@
 
 namespace Bogers.Chapoco.Api.Pococha;
 
+/// <summary>
+/// Service tracking current pococha authentication state, alerts upon becoming unauthenticated
+/// </summary>
 public class PocochaAuthenticationStateMonitor : TimedBackgroundService
 {
     private readonly ILogger _logger;

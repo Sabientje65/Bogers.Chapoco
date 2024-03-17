@@ -5,6 +5,9 @@ using System.Text.Json.Nodes;
 
 namespace Bogers.Chapoco.Api.Pococha;
 
+/// <summary>
+/// Service for interacting with Pococha
+/// </summary>
 public class PocochaClient
 {
     private readonly ILogger _logger;

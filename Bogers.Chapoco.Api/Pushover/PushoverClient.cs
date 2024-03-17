@@ -4,6 +4,9 @@ using Microsoft.Extensions.Options;
 
 namespace Bogers.Chapoco.Api.Pushover;
 
+/// <summary>
+/// Service for sending notifications via pushover
+/// </summary>
 public class PushoverClient
 {
     private readonly ILogger _logger;
