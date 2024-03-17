@@ -2,10 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bogers.Chapoco.Api", "Bogers.Chapoco.Api\Bogers.Chapoco.Api.csproj", "{5F1A5FA8-9C2C-4801-BABF-044DDDE2932B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bogers.Chapoco.Cleaner", "Bogers.Chapoco.Cleaner\Bogers.Chapoco.Cleaner.csproj", "{8B90074F-5C2B-467D-9AAB-CBAAFE94816E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bogers.Chapoco.Publisher", "Bogers.Chapoco.Publisher\Bogers.Chapoco.Publisher.csproj", "{DEFCDCFD-AE2B-4267-9F7A-686A7DFAF986}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -16,13 +12,5 @@ Global
 		{5F1A5FA8-9C2C-4801-BABF-044DDDE2932B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5F1A5FA8-9C2C-4801-BABF-044DDDE2932B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5F1A5FA8-9C2C-4801-BABF-044DDDE2932B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8B90074F-5C2B-467D-9AAB-CBAAFE94816E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8B90074F-5C2B-467D-9AAB-CBAAFE94816E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8B90074F-5C2B-467D-9AAB-CBAAFE94816E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8B90074F-5C2B-467D-9AAB-CBAAFE94816E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DEFCDCFD-AE2B-4267-9F7A-686A7DFAF986}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DEFCDCFD-AE2B-4267-9F7A-686A7DFAF986}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DEFCDCFD-AE2B-4267-9F7A-686A7DFAF986}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DEFCDCFD-AE2B-4267-9F7A-686A7DFAF986}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

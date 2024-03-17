@@ -82,7 +82,7 @@ public class PocochaClient
     )
     {
         var msg = new HttpRequestMessage(method, uri);
-        _headerStore.ApplyTo(msg);
+        _headerStore.WriteTo(msg);
 
         if (body != null)
         {

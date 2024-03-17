@@ -10,7 +10,7 @@ public class PocochaHeaderStore
     private const string TokenHeader = "x-pokota-token";
     private static Regex PocochaApiUrlExp = new Regex("^https?://api.pococha.com");
     
-    private object _mutex = new object();
+    private readonly object _mutex = new object();
     public DateTime LastUpdate { get; private set; }
 
     public string? CurrentToken => _headers.TryGetValue(TokenHeader, out var token) ? token : null; 
@@ -66,7 +66,7 @@ public class PocochaHeaderStore
         return true;
     }
 
-    public void ApplyTo(HttpRequestMessage request)
+    public void WriteTo(HttpRequestMessage request)
     {
         IDictionary<string, string> headers;
         lock (_mutex) headers = _headers;
