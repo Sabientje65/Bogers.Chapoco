@@ -11,6 +11,7 @@ public abstract class TimedBackgroundService : BackgroundService
     {
         using var timer = new PeriodicTimer(Period);
 
+        await Run(stoppingToken);
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             await Run(stoppingToken);

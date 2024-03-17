@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
@@ -33,5 +34,10 @@ public static class DebugHelper
         foreach (var header in headers) sb.AppendLine($"{header["name"]}: {header["value"]}");
         return sb.ToString();
     }
-    
+
+    /// <summary>
+    /// Exposes whether the program is being run in debug mode
+    /// </summary>
+    public static bool IsDebugMode => Debugger.IsAttached;
+
 }

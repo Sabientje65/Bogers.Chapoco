@@ -38,8 +38,11 @@ public class PocochaHeaderStore
     public bool UpdateFromHar(JsonNode har)
     {
         // for reference, see: http://www.softwareishard.com/blog/har-12-spec
-        var entries = har["log"]["entries"].AsArray();
-        var parsableEntry = entries
+        var requests = har["log"]["entries"]
+            .AsArray()
+            .Select(entry => entry["request"]);
+        
+        var parsableEntry = requests
             .LastOrDefault(CanUseForUpdate);
         
         // no valid entries found, no pococha requests made?
@@ -81,7 +84,7 @@ public class PocochaHeaderStore
     }
 
     private bool CanUseForUpdate(JsonNode request)
-    {
+    {   
         var url = request["url"].GetValue<string>();
         var headers = request["headers"].AsArray();
         var tokenHeader = headers

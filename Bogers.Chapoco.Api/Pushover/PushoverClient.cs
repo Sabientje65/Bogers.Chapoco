@@ -28,6 +28,9 @@ public class PushoverClient
 
     public async Task SendMessage(PushoverMessage message)
     {
+        // log message? trace invocation?
+        if (!_pushoverConfiguration.Enabled) return;
+        
         var payload = JsonSerializer.SerializeToNode(message, PushoverJsonSerializerOptions);
         payload["token"] = _pushoverConfiguration.AppToken;
         payload["user"] = _pushoverConfiguration.UserToken;

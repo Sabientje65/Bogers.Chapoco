@@ -1,4 +1,5 @@
-﻿using Bogers.Chapoco.Api.Pushover;
+﻿using System.Diagnostics;
+using Bogers.Chapoco.Api.Pushover;
 using Microsoft.Extensions.Options;
 
 namespace Bogers.Chapoco.Api.Pococha;
@@ -43,7 +44,9 @@ public class PocochaHeaderStoreUpdater : TimedBackgroundService
                     didUpdate = pocochaHeaderStore.UpdateFromHar(har) || didUpdate;
                     
                     // delete processed
-                    File.Delete(flowFile);
+                    if (!DebugHelper.IsDebugMode) File.Delete(flowFile); // <-- dry mode?
+                    else { /* log */ }
+                    
 
                     // send pushover notification on successful update?
                 }

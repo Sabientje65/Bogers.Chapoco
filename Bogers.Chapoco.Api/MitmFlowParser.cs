@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using System.Text.Json.Nodes;
+using Bogers.Chapoco.Api;
 using CliWrap;
 
 class MitmFlowParser
@@ -18,11 +19,13 @@ class MitmFlowParser
     public async Task<JsonNode> ParseToHar(string path)
     {
         // todo: add ability to add a flowfilter
+        // normalize path
+        path = PathHelper.Normalize(path);
         
         if (!File.Exists(path)) throw new FileNotFoundException("Could not find file", path);
 
-        var har = new StringBuilder();
-        var err = new StringBuilder();
+        var harBuilder = new StringBuilder();
+        var errBuilder = new StringBuilder();
         
         using var gracefulCls = new CancellationTokenSource();
         var gracefulToken = gracefulCls.Token;
@@ -30,7 +33,7 @@ class MitmFlowParser
         // give mitmdump a default of 2500ms to produce output, after that we'll be waiting in intervals of 150ms
         // if no output is written anymore, we gracefully terminate
         // allowing us to capture the har output written to stdout by mitmdump
-        gracefulCls.CancelAfter(2500);
+        gracefulCls.CancelAfter(TimeSpan.FromSeconds(5));
 
         var cmd = Cli.Wrap("mitmdump")
             .WithArguments(["-nr", path, "--set", "hardump=-"])
@@ -38,14 +41,14 @@ class MitmFlowParser
             {
                 if (gracefulCls.IsCancellationRequested)
                 {
-                    har.Append(_);
+                    harBuilder.Append(_);
                     return;
                 }
 
                 // small delay for next regular output, no more output = assumed done
-                gracefulCls.CancelAfter(150);   
+                gracefulCls.CancelAfter(TimeSpan.FromMilliseconds(500));   
             }))
-            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(err))
+            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(errBuilder))
             .WithValidation(CommandResultValidation.None);
 
         try
@@ -60,7 +63,12 @@ class MitmFlowParser
         }
         catch (OperationCanceledException e)
         {
-            if (e.CancellationToken == gracefulToken) return JsonNode.Parse(har.ToString())!;
+            var har = harBuilder.ToString();
+            if (!String.IsNullOrEmpty(har)) return JsonNode.Parse(har)!;
+            
+            var err = errBuilder.ToString();
+            if (!String.IsNullOrEmpty(err)) throw new ApplicationException($"mitmdump failed: {errBuilder}");
+            
             throw; // bubble when something else occurred
         }
     }
