@@ -1,22 +1,7 @@
 using Bogers.Chapoco.Api;
+using Bogers.Chapoco.Api.Pococha;
 
 var builder = WebApplication.CreateBuilder(args);
-
-
-//mitmdump --no-server --quiet --rfile flows_local --set hardump=- 
-// mitmdump -qnr flows_local --set hardump=-
-// --script <-- what info do we get?
-
-// var cls = new CancellationTokenSource();
-// var token = cls.Token;
-// cls.CancelAfter(10_000);
-// cls.CancelAfter(500);
-// cls.CancelAfter(10_000);
-// await Task.Delay(1000);
-// Console.WriteLine(token.IsCancellationRequested);
-// await Task.Delay(10_000);
-//
-// return;
 
 var flowParser = new MitmFlowParser();
 var headerStore = new PocochaHeaderStore();

@@ -17,6 +17,8 @@ class MitmFlowParser
     /// <exception cref="OperationCanceledException">Thrown when parsing failed (interrupted)</exception>
     public async Task<JsonNode> ParseToHar(string path)
     {
+        // todo: add ability to add a flowfilter
+        
         if (!File.Exists(path)) throw new FileNotFoundException("Could not find file", path);
 
         var har = new StringBuilder();
@@ -32,20 +34,17 @@ class MitmFlowParser
 
         var cmd = Cli.Wrap("mitmdump")
             .WithArguments(["-nr", path, "--set", "hardump=-"])
-            .WithStandardOutputPipe(PipeTarget.Merge(
-                
-                PipeTarget.ToDelegate(_ =>
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(_ =>
+            {
+                if (gracefulCls.IsCancellationRequested)
                 {
-                    if (gracefulCls.IsCancellationRequested)
-                    {
-                        har.Append(_);
-                        return;
-                    }
+                    har.Append(_);
+                    return;
+                }
 
-                    // small delay for next regular output, no more output = assumed done
-                    gracefulCls.CancelAfter(150);   
-                })
-            ))
+                // small delay for next regular output, no more output = assumed done
+                gracefulCls.CancelAfter(150);   
+            }))
             .WithStandardErrorPipe(PipeTarget.ToStringBuilder(err))
             .WithValidation(CommandResultValidation.None);
 

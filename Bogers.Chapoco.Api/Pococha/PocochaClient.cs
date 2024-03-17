@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
 
-namespace Bogers.Chapoco.Api;
+namespace Bogers.Chapoco.Api.Pococha;
 
 public class PocochaClient
 {

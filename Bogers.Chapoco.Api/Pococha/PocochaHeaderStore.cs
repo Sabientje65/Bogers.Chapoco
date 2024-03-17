@@ -1,6 +1,8 @@
 ﻿using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
+namespace Bogers.Chapoco.Api.Pococha;
+
 public class PocochaHeaderStore
 {
     // also of interest: x-pokota-device-session-id
@@ -27,6 +29,9 @@ public class PocochaHeaderStore
             {
                 _headers = new Dictionary<string, string>();   
             }
+            
+            // should we fire an event on invalidation? _headerStore.OnInvalidated += (...)
+            // makes it easier to detect invalidation the moment it happens
         }
     }
     

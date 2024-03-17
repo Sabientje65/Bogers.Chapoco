@@ -8,7 +8,6 @@ public static class DebugHelper
 {
     private static Regex PocochaApiUrlExp = new Regex("^https?://api.pococha.com");
     
-    
     /// <summary>
     /// Find all requests to pococha's api
     /// </summary>
