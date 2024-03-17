@@ -4,24 +4,26 @@ namespace Bogers.Chapoco.Api.Pococha;
 
 public class PocochaAuthenticationStateMonitor : TimedBackgroundService
 {
-    private readonly PocochaClient _pococha;
-    private readonly PushoverClient _pushover;
+    private readonly IServiceProvider _serviceProvider;
     private bool _previous = true;
 
-    public PocochaAuthenticationStateMonitor(PocochaClient pococha, PushoverClient pushover)
-    {
-        _pococha = pococha;
-        _pushover = pushover;
-    }
+    public PocochaAuthenticationStateMonitor(IServiceProvider serviceProvider) => _serviceProvider = serviceProvider;
 
     protected override TimeSpan Period { get; } = TimeSpan.FromMinutes(1);
 
     protected override async Task Run(CancellationToken stoppingToken)
     {
-        var isAuthenticated = await _pococha.IsAuthenticated();
+        // alternative: define services as properties -> mark as injected via attribute, have base class manage injection
+        // too much magic for now though
+        using var serviceScope = _serviceProvider.CreateScope();
+        
+        var pococha = serviceScope.ServiceProvider.GetRequiredService<PocochaClient>();
+        var pushover = serviceScope.ServiceProvider.GetRequiredService<PushoverClient>();
+        
+        var isAuthenticated = await pococha.IsAuthenticated();
         var becameUnauthenticated = _previous && !isAuthenticated;
             
-        if (becameUnauthenticated) await _pushover.SendMessage(PushoverMessage.Text("Pococha token invalidated", "Please open up the pococha app for a token refresh"));
+        if (becameUnauthenticated) await pushover.SendMessage(PushoverMessage.Text("Pococha token invalidated", "Please open up the pococha app for a token refresh"));
 
         _previous = isAuthenticated;
     }

@@ -1,34 +1,33 @@
 ﻿using Bogers.Chapoco.Api.Pushover;
+using Microsoft.Extensions.Options;
 
 namespace Bogers.Chapoco.Api.Pococha;
 
 public class PocochaHeaderStoreUpdater : TimedBackgroundService
 {
-    private readonly PocochaConfiguration _pocochaConfiguration;
-    private readonly PocochaHeaderStore _pocochaHeaderStore;
-    private readonly PocochaClient _pococha;
-    private readonly PushoverClient _pushover;
+    private readonly IServiceProvider _serviceProvider;
 
-    public PocochaHeaderStoreUpdater(PocochaConfiguration pocochaConfiguration, PocochaHeaderStore pocochaHeaderStore, PocochaClient pococha, PushoverClient pushover)
-    {
-        _pocochaConfiguration = pocochaConfiguration;
-        _pocochaHeaderStore = pocochaHeaderStore;
-        _pococha = pococha;
-        _pushover = pushover;
-    }
+    public PocochaHeaderStoreUpdater(IServiceProvider serviceProvider) => _serviceProvider = serviceProvider;
 
     protected override TimeSpan Period { get; } = TimeSpan.FromMinutes(1);
     protected override async Task Run(CancellationToken stoppingToken)
     {
         // should migrate to filesystemwatcher
         
+        using var serviceScope = _serviceProvider.CreateScope();
+        
+        var pocochaConfiguration = serviceScope.ServiceProvider.GetRequiredService<IOptions<PocochaConfiguration>>().Value;
+        var pocochaHeaderStore = serviceScope.ServiceProvider.GetRequiredService<PocochaHeaderStore>();
+        var pococha = serviceScope.ServiceProvider.GetRequiredService<PocochaClient>();
+        var pushover = serviceScope.ServiceProvider.GetRequiredService<PushoverClient>();
+        
         try
         {
-            if (!Directory.Exists(_pocochaConfiguration.FlowsDirectory)) return;
+            if (!Directory.Exists(pocochaConfiguration.FlowsDirectory)) return;
 
             // filenames are assumed to be sortable by date
             var flowParser = new MitmFlowParser();
-            var files = Directory.EnumerateFiles(_pocochaConfiguration.FlowsDirectory)
+            var files = Directory.EnumerateFiles(pocochaConfiguration.FlowsDirectory)
                 .OrderBy(f => f);
 
             var didUpdate = false;
@@ -41,7 +40,7 @@ public class PocochaHeaderStoreUpdater : TimedBackgroundService
                 {
                     var har = await flowParser
                         .ParseToHar(flowFile); // <-- add ability to filter flows (only requests to pococha?)
-                    didUpdate = _pocochaHeaderStore.UpdateFromHar(har) || didUpdate;
+                    didUpdate = pocochaHeaderStore.UpdateFromHar(har) || didUpdate;
                     
                     // delete processed
                     File.Delete(flowFile);
@@ -58,11 +57,11 @@ public class PocochaHeaderStoreUpdater : TimedBackgroundService
 
             if (didUpdate)
             {
-                var authenticatedLabel = await _pococha.IsAuthenticated() ?
+                var authenticatedLabel = await pococha.IsAuthenticated() ?
                     "Authenticated" :
                     "Unauthenticated";
                 
-                await _pushover.SendMessage(
+                await pushover.SendMessage(
                     PushoverMessage.Text("Pococha token updated", $"Current authentication status: {authenticatedLabel}")    
                 );
             }

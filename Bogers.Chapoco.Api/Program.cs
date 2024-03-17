@@ -1,17 +1,25 @@
-using Bogers.Chapoco.Api;
 using Bogers.Chapoco.Api.Pococha;
+using Bogers.Chapoco.Api.Pushover;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var flowParser = new MitmFlowParser();
-var headerStore = new PocochaHeaderStore();
-var har = await flowParser.ParseToHar("D:\\Data\\flows_live");
-var pocochaRequests = DebugHelper.FindPocochaRequests(har);
+builder.Services
+    .AddHttpClient()
+    .AddSingleton<PocochaHeaderStore>()
+    .AddScoped<PocochaClient>()
+    .AddScoped<PushoverClient>();
+    // .AddHostedService<PocochaAuthenticationStateMonitor>()
+    // .AddHostedService<PocochaHeaderStoreUpdater>()
+    // .AddHostedService<PocochaLiveMonitor>();
 
 
-headerStore.UpdateFromHar(har);
+builder.Services.AddOptions<PushoverConfiguration>()
+    .BindConfiguration("Pushover");
+builder.Services.AddOptions<PocochaConfiguration>()
+    .BindConfiguration("Pococha");
 
-return;
+// builder.Configuration.AddJsonFile("appsettings.json");
 
 // var p = new MitmParser().ParseFlowsAsHar();
 
@@ -41,6 +49,15 @@ app.UseHttpsRedirection();
 // {
 //     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 // };
+
+app.MapGet("/debug/notification", async (
+    [FromServices] PushoverClient pushover,
+    [FromQuery] string message
+) =>
+{
+    await pushover.SendMessage(PushoverMessage.Text(message));
+    return new { status = "ok" };
+});
 
 app.MapGet("/weatherforecast", () =>
     {

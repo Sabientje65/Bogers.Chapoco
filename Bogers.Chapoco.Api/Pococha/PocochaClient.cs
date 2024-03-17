@@ -20,7 +20,7 @@ public class PocochaClient
     {
         _headerStore = headerStore;
         // _client = new HttpClient { BaseAddress = new Uri("https://api.pococha.com") };
-        _client = httpClientFactory.CreateClient();
+        _client = httpClientFactory.CreateClient("pococha");
         _client.BaseAddress = new Uri("https://api.pococha.com");
     }
 

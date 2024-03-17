@@ -4,23 +4,22 @@ namespace Bogers.Chapoco.Api.Pococha;
 
 public class PocochaLiveMonitor : TimedBackgroundService
 {
-    private readonly PocochaClient _pococha;
-    private readonly PushoverClient _pushover;
-
+    private readonly IServiceProvider _serviceProvider;
     private readonly ISet<int> _previous = new HashSet<int>();
 
-    public PocochaLiveMonitor(PocochaClient pococha, PushoverClient pushover)
-    {
-        _pococha = pococha;
-        _pushover = pushover;
-    }
+    public PocochaLiveMonitor(IServiceProvider serviceProvider) => _serviceProvider = serviceProvider;
 
     protected override TimeSpan Period { get; } = TimeSpan.FromMinutes(1);
     protected override async Task Run(CancellationToken stoppingToken)
     {
+        using var serviceScope = _serviceProvider.CreateScope();
+        
+        var pococha = serviceScope.ServiceProvider.GetRequiredService<PocochaClient>();
+        var pushover = serviceScope.ServiceProvider.GetRequiredService<PushoverClient>();
+        
         try
         {
-            var currentlyLive = await _pococha.GetCurrentlyLive();
+            var currentlyLive = await pococha.GetCurrentlyLive();
             var currentlyLiveUsers = currentlyLive.LiveResources
                 .Select(x => x.Live.User.Id)
                 .ToHashSet();
@@ -40,7 +39,7 @@ public class PocochaLiveMonitor : TimedBackgroundService
                     .First(x => x.Live.User.Id == userId);
 
                 // todo: link to chapoco.bogers.online
-                await _pushover.SendMessage(
+                await pushover.SendMessage(
                     PushoverMessage.Text($"{liveResource.Live.User.Name} went live!", liveResource.Live.Title)
                 );
             }
