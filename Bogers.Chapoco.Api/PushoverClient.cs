@@ -32,10 +32,23 @@ public class PushoverMessage
     [JsonPropertyName("message")]
     public string Message { get; set; }
     
-    public PushoverMessage(string message)
+    private PushoverMessage() { }
+
+    public static PushoverMessage Text(string title, string message) => new PushoverMessage
     {
-        Message = message;
-    }
+        Message = message, 
+        Title = title
+    };
+
+    public static PushoverMessage Text(string message) => new PushoverMessage
+    {
+        Message = message
+    };
+
+    // public PushoverMessage(string message)
+    // {
+    //     Message = message;
+    // }
 }
 
 

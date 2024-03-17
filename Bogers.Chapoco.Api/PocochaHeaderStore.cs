@@ -7,11 +7,28 @@ public class PocochaHeaderStore
     
     private const string TokenHeader = "x-pokota-token";
     private static Regex PocochaApiUrlExp = new Regex("^https?://api.pococha.com");
+    
+    private object _mutex = new object();
+    public DateTime LastUpdate { get; private set; }
 
     public string? CurrentToken => _headers.TryGetValue(TokenHeader, out var token) ? token : null; 
     public bool IsValid => !String.IsNullOrEmpty(CurrentToken);
     
     private IDictionary<string, string> _headers = new Dictionary<string, string>();
+    
+    public void Invalidate()
+    {
+        var now = DateTime.UtcNow;
+
+        // skip invalidation when headers have been updated post-invocation
+        lock (_mutex)
+        {
+            if (now > LastUpdate)
+            {
+                _headers = new Dictionary<string, string>();   
+            }
+        }
+    }
     
     public bool UpdateFromHar(JsonNode har)
     {
@@ -35,11 +52,28 @@ public class PocochaHeaderStore
         }
 
         // override at once to prevent off-chance of update taking place during read
-        _headers = headersDict;
+        lock (_mutex)
+        {
+            LastUpdate = DateTime.UtcNow;
+            _headers = headersDict;
+        }
+        
         return true;
     }
 
-    public IDictionary<string, string> Read() => _headers;
+    public void ApplyTo(HttpRequestMessage request)
+    {
+        IDictionary<string, string> headers;
+        lock (_mutex) headers = _headers;
+        
+        foreach (var (name, value) in headers)
+        {
+            // skip content-type etc. those are determined by our consumer
+            if (name.Equals("content-type", StringComparison.OrdinalIgnoreCase)) continue;
+            
+            request.Headers.TryAddWithoutValidation(name, value);
+        }
+    }
 
     private bool CanUseForUpdate(JsonNode request)
     {

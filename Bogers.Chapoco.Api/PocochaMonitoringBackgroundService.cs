@@ -13,67 +13,218 @@ public class PocochaMonitoringBackgroundService : BackgroundService
     private readonly ILogger _logger;
     
     private readonly PushoverClient _pushover;
+    private readonly PocochaClient _pococha;
     private readonly PocochaHeaderStore _pocochaHeaderStore;
     private readonly PocochaConfiguration _pocochaConfiguration;
     
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (true)
+        StartMonitoringPocochaFlows(stoppingToken);
+        StartMonitoringValidity(stoppingToken);
+        StartMonitoringLives(stoppingToken);
+
+        var tsc = new TaskCompletionSource();
+        stoppingToken.Register(() => tsc.SetResult());
+        
+        return tsc.Task;
+    }
+
+    private void StartMonitoringValidity(CancellationToken token)
+    {
+        var alerter = new PocochaAuthenticationAlerter(
+            _pococha, 
+            _pushover
+        );
+        
+        var timer = new Timer(
+            _ => alerter.Run().Wait()
+        );
+
+        timer.Change(TimeSpan.Zero, TimeSpan.FromMinutes(1));
+        token.Register(() => timer.Dispose());
+    }
+
+    private void StartMonitoringPocochaFlows(CancellationToken token)
+    {
+        var flowMonitor = new PocochaFlowUpdater(
+            _pocochaConfiguration,
+            _pocochaHeaderStore,
+            _pococha,
+            _pushover
+        );
+        
+        var timer = new Timer(
+            _ => flowMonitor.Run().Wait()
+        );
+
+        // start immediately, then run every minute
+        timer.Change(TimeSpan.Zero, TimeSpan.FromMinutes(1));
+        token.Register(() => timer.Dispose());
+    }
+
+    private void StartMonitoringLives(CancellationToken token)
+    {
+        var alerter = new PocochaLiveAlerter(
+            _pococha,
+            _pushover
+        );
+        
+        var timer = new Timer(
+            _ => alerter.Run().Wait()
+        );
+        
+        timer.Change(TimeSpan.Zero, TimeSpan.FromMinutes(1));
+        token.Register(() => timer.Dispose());
+    }
+
+
+    class PocochaFlowUpdater
+    {
+        private readonly PocochaConfiguration _pocochaConfiguration;
+        private readonly PocochaHeaderStore _pocochaHeaderStore;
+        private readonly PocochaClient _pococha;
+        private readonly PushoverClient _pushover;
+
+        public PocochaFlowUpdater(
+            PocochaConfiguration pocochaConfiguration, 
+            PocochaHeaderStore pocochaHeaderStore, 
+            PocochaClient pococha, 
+            PushoverClient pushover
+        )
+        {
+            _pocochaConfiguration = pocochaConfiguration;
+            _pocochaHeaderStore = pocochaHeaderStore;
+            _pococha = pococha;
+            _pushover = pushover;
+        }
+
+        public async Task Run()
         {
             try
             {
+                if (!Directory.Exists(_pocochaConfiguration.FlowsDirectory)) return;
 
-            }
-            catch (TaskCanceledException)
-            {
-                if (stoppingToken.IsCancellationRequested) break;
-                throw;
-            }
-        }
-    }
+                // filenames are assumed to be sortable by date
+                var flowParser = new MitmFlowParser();
+                var files = Directory.EnumerateFiles(_pocochaConfiguration.FlowsDirectory)
+                    .OrderBy(f => f);
 
-    private async Task UpdateHeaders()
-    {
-        try
-        {
-            if (!Directory.Exists(_pocochaConfiguration.FlowsDirectory)) return;
-            
-            // filenames are assumed to be sortable by date
-            var flowParser = new MitmFlowParser();
-            var files = Directory.EnumerateFiles(_pocochaConfiguration.FlowsDirectory)
-                .OrderBy(f => f);
+                var didUpdate = false;
 
-            foreach (var flowFile in files)
-            {
-                try
+                foreach (var flowFile in files)
                 {
-                    var har = await flowParser.ParseToHar(flowFile);
-                    var didUpdate = _pocochaHeaderStore.UpdateFromHar(har);
+                    // skip files greater than ~50-100mb -> likely garbage for our purposes
+
+                    try
+                    {
+                        var har = await flowParser
+                            .ParseToHar(flowFile); // <-- add ability to filter flows (only requests to pococha?)
+                        didUpdate = _pocochaHeaderStore.UpdateFromHar(har) || didUpdate;
                     
-                    // send pushover notification on successful update?
+                        // delete processed
+                        File.Delete(flowFile);
+
+                        // send pushover notification on successful update?
+                    }
+                    catch (Exception e)
+                    {
+                        // log
+                    }
                 }
-                catch (Exception e)
+            
+                // log updated status
+
+                if (didUpdate)
                 {
-                    // log
+                    var authenticatedLabel = await _pococha.IsAuthenticated() ?
+                        "Authenticated" :
+                        "Unauthenticated";
+                
+                    await _pushover.SendMessage(
+                        PushoverMessage.Text("Pococha token updated", $"Current authentication status: {authenticatedLabel}")    
+                    );
                 }
+            }
+            catch (Exception e)
+            {
+                // log
             }
         }
     }
 
-    private async Task<bool> PollSessionValidity()
+    class PocochaLiveAlerter
     {
-        // validate session validity, when state differs from previous, send update?
+        private readonly PocochaClient _pococha;
+        private readonly PushoverClient _pushover;
+
+        private readonly ISet<int> _previous = new HashSet<int>();
+
+        public PocochaLiveAlerter(PocochaClient pococha, PushoverClient pushover)
+        {
+            _pococha = pococha;
+            _pushover = pushover;
+        }
+
+        public async Task Run()
+        {
+            try
+            {
+                var currentlyLive = await _pococha.GetCurrentlyLive();
+                var currentlyLiveUsers = currentlyLive.LiveResources
+                    .Select(x => x.Live.User.Id)
+                    .ToHashSet();
+
+                var newLiveUsers = currentlyLiveUsers
+                    .Except(_previous)
+                    .ToArray();
+                
+                // clear previous run, we'll replace it with our current collection
+                _previous.Clear();
+                
+                foreach (var userId in newLiveUsers)
+                {
+                    _previous.Add(userId);
+                    
+                    var liveResource = currentlyLive.LiveResources
+                        .First(x => x.Live.User.Id == userId);
+
+                    // todo: link to chapoco.bogers.online
+                    await _pushover.SendMessage(
+                        PushoverMessage.Text($"{liveResource.Live.User.Name} went live!", liveResource.Live.Title)
+                    );
+                }
+            }
+            catch (TokenExpiredException)
+            {
+                // swallow
+            }
+            catch (Exception)
+            {
+                // log
+            }
+        }
     }
 
-    private async Task PollCurrentlyLive()
+    class PocochaAuthenticationAlerter
     {
-        // send pushover notification when someone went live (= diff with previous live now)
-    }
+        private readonly PocochaClient _pococha;
+        private readonly PushoverClient _pushover;
+        private bool _previous = true;
+        
+        public PocochaAuthenticationAlerter(PocochaClient pococha, PushoverClient pushover)
+        {
+            _pococha = pococha;
+            _pushover = pushover;
+        }
 
+        public async Task Run()
+        {
+            var isAuthenticated = await _pococha.IsAuthenticated();
+            var becameUnauthenticated = _previous && !isAuthenticated;
+            
+            if (becameUnauthenticated) await _pushover.SendMessage(PushoverMessage.Text("Pococha token invalidated", "Please open up the pococha app for a token refresh"));
 
-    private async Task AlertLive(string who)
-    {
-        // todo, include url
-        await _pushover.SendMessage(new PushoverMessage($"{who} went live on pococha!"));
+            _previous = isAuthenticated;
+        }
     }
 }
