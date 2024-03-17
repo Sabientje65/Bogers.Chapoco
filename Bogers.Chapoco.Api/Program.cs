@@ -11,8 +11,7 @@ builder.Services
     .AddSingleton<PocochaHeaderStore>()
     .AddScoped<PocochaClient>()
     .AddScoped<PushoverClient>()
-    .AddHostedService<PocochaHeaderStoreUpdater>()
-    .AddHostedService<PocochaAuthenticationStateMonitor>()
+    .AddHostedService<PocochaAuthenticationService>()
     .AddHostedService<PocochaLiveMonitor>()
     ;
 
@@ -39,8 +38,8 @@ app.MapGet("/api/debug/notification", async (
 });
 
 app.MapMethods(
-    "/api/pococha/forward/{**path}",
-    [HttpMethod.Get.Method, HttpMethod.Post.Method, HttpMethod.Delete.Method],
+    "/api/pococha/proxy/{**path}",
+    [HttpMethod.Get.Method, HttpMethod.Post.Method, HttpMethod.Put.Method, HttpMethod.Delete.Method],
     async (
         HttpContext context, 
         [FromServices] PocochaClient pococha,
