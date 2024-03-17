@@ -110,8 +110,13 @@ public class PocochaAuthenticationService : TimedBackgroundService
                 
                 // delete processed
                 if (!DebugHelper.IsDebugMode) File.Delete(flowFile); // <-- dry mode?
-                else { /* log */ }
                 
+                var harLocation = Path.Combine(pocochaConfiguration.HarArchiveDirectory, $"{Path.GetFileNameWithoutExtension(flowFile)}.har");
+                _logger.LogInformation("Archiving har at: {HarLocation}", harLocation);
+                
+                // todo: automatically clean old files
+                // should we gzip our hars?
+                if (!DebugHelper.IsDebugMode) await File.WriteAllTextAsync(harLocation, har.ToString());
 
                 // send pushover notification on successful update?
             }
