@@ -4,22 +4,19 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 FROM build
 
 WORKDIR /src
-
-ARG BUILD_CONFIGURATION=Release
 COPY . .
-
 RUN dotnet restore
-RUN dotnet build -c $BUILD_CONFIGURATION -o /app
+RUN dotnet build -c Release -o /app
 
 FROM base
-ARG BUILD_CONFIGURATION=Release
 WORKDIR /app
-COPY --from=build /app .
+COPY --from=build . .
 
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "Bogers.Chapoco.Api.dll"]
+ENTRYPOINT ["bash"]
+# ENTRYPOINT ["dotnet", "Bogers.Chapoco.Api.dll"]
 
 
 #USER $APP_UID
