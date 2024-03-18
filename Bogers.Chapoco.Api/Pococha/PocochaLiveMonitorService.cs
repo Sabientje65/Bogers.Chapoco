@@ -40,15 +40,15 @@ public class PocochaLiveMonitorService : TimedBackgroundService
                 .Except(_previous)
                 .ToArray();
             
-            _logger.LogInformation("Found {NewLiveUsers} new live users, currently {CurrentLiveUsers} live", newLiveUsers.Length, newLiveUsers.Length);
+            _logger.LogInformation("Found {NewLiveUsers} new live users, currently {CurrentLiveUsers} live", newLiveUsers.Length, currentlyLiveUsers.Count);
                 
             // clear previous run, we'll replace it with our current collection
             _previous.Clear();
-                
+
+            foreach (var liveUser in currentlyLiveUsers) _previous.Add(liveUser);
+            
             foreach (var userId in newLiveUsers)
-            {
-                _previous.Add(userId);
-                    
+            {    
                 var liveResource = currentlyLive.LiveResources
                     .First(x => x.User.Id == userId);
 
