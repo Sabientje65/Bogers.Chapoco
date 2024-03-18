@@ -4,9 +4,6 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 FROM build AS build
 
 WORKDIR /src
-COPY . .
-RUN dotnet restore
-RUN dotnet build -c Release -o /app
 
 # prepare mitmproxym 
 # should set version in env var
@@ -16,6 +13,10 @@ RUN apt-get update \
     && apt-get install wget \
     && wget https://downloads.mitmproxy.org/10.2.4/mitmproxy-10.2.4-linux-x86_64.tar.gz \
     && tar -xvf mitmproxy-10.2.4-linux-x86_64.tar.gz
+
+COPY . .
+RUN dotnet restore
+RUN dotnet build -c Release -o /app
 
 # move build artifacts to app
 FROM base
