@@ -92,7 +92,10 @@ public class PocochaAuthenticationService : TimedBackgroundService
         // filenames are assumed to be sortable by date
         var flowParser = new MitmFlowParser();
         var files = Directory.EnumerateFiles(pocochaConfiguration.FlowsDirectory)
-            .OrderBy(f => f);
+            .OrderBy(f => f)
+            .ToArray();
+
+        _logger.LogInformation("Found {FlowFileCount} flow files", files.Length);
 
         foreach (var flowFile in files)
         {

@@ -26,7 +26,7 @@ COPY --from=build ./src/mitmdump .
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 VOLUME /app/appsettings.json
-VOLUME /flows
+VOLUME /data
 
-ENTRYPOINT ["bash"]
-# ENTRYPOINT ["dotnet", "Bogers.Chapoco.Api.dll"]
+# ENTRYPOINT ["bash"]
+ENTRYPOINT ["dotnet", "Bogers.Chapoco.Api.dll"]
