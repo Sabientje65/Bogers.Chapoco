@@ -30,7 +30,7 @@ public class PocochaAuthenticationService : TimedBackgroundService
     {
         // alternative: define services as properties -> mark as injected via attribute, have base class manage injection
         // too much magic for now though
-        using var serviceScope = _serviceProvider.CreateScope();
+        await using var serviceScope = _serviceProvider.CreateAsyncScope();
         
         var pococha = serviceScope.ServiceProvider.GetRequiredService<PocochaClient>();
         var pushover = serviceScope.ServiceProvider.GetRequiredService<PushoverClient>();

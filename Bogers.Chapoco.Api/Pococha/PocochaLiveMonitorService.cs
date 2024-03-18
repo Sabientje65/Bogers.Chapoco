@@ -22,7 +22,7 @@ public class PocochaLiveMonitorService : TimedBackgroundService
     
     protected override async Task Run(CancellationToken stoppingToken)
     {
-        using var serviceScope = _serviceProvider.CreateScope();
+        await using var serviceScope = _serviceProvider.CreateAsyncScope();
         
         var pococha = serviceScope.ServiceProvider.GetRequiredService<PocochaClient>();
         var pushover = serviceScope.ServiceProvider.GetRequiredService<PushoverClient>();

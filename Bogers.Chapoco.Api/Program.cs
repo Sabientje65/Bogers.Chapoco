@@ -166,10 +166,62 @@ app.MapMethods(
     }
 );
 
-app.MapGet("/following", (context) =>
-{
-    return Task.FromResult("following");
-});
+app.MapGet("/{who:regex(^(following|all)$)}", async (
+        HttpContext context,
+        [FromRoute] string who,
+        [FromServices] PocochaClient pococha
+    ) =>
+    {
+        var lives = who == "following" ?
+            await pococha.GetFollowingCurrentlyLive() :
+            await pococha.GetCurrentlyLive();
+
+        context.Response.ContentType = "text/html; charset=utf-8";
+        return $$"""
+         <!DOCTYPE HTML>
+         <html>
+             <head>
+                 <title>Following</title>
+             </head>
+             <body>
+                {{ String.Join(" ", lives.LiveResources.Select(buildUi)) }}
+             </body>
+         </html>
+         """;
+        
+        string buildUi(LiveResource live)
+        {
+            return $$"""
+                <article class="live">
+                    <a href="/view/{{live.Live.Id}}">
+                        <img 
+                            width="150" 
+                            height"150" 
+                            class="thumbnail" 
+                            src="{{esc(live.Live.ThumbnailImageUrl)}}">
+                        </img>
+                    </a>
+                    
+                    <a href="/view/{{live.Live.Id}}">
+                        <div class="details">
+                            <img
+                                width="25"
+                                height="25"
+                                class="profile-image"
+                                src="{{live.User.ProfileImageUrl}}"
+                            >
+                            </img>
+                            
+                            <h2 class="title">{{esc(live.Live.Title)}}</h2>
+                        </div>
+                    </a>
+                </article>       
+            """;
+        }
+        
+        string esc(string input) => HtmlEncoder.Default.Encode(input);
+    }
+);
 
 app.MapGet("/view/{liveId}", async (
     HttpContext context, 
@@ -210,10 +262,9 @@ app.MapGet("/view/{liveId}", async (
 
 app.Run();
 
-
 class AppAuthenticationService
 {
-    private static Guid _unique = Guid.NewGuid();
+    private static readonly Guid _unique = Guid.NewGuid();
     private readonly AuthenticationConfiguration _configuration;
 
     public string Token

@@ -78,6 +78,20 @@ public class PocochaClient : IDisposable
         
         return await ReadJsonContent<LivesResource>(res);
     }
+    
+    /// <summary>
+    /// Retrieve a list of currently live accounts
+    /// </summary>
+    /// <param name="token">Cancellation token</param>
+    /// <returns>List of liveresources</returns>
+    /// <exception cref="TokenExpiredException">Thrown when pococha token is expired</exception>
+    public async Task<LivesResource> GetCurrentlyLive(CancellationToken token = default)
+    {
+        ThrowIfTokenInvalid();
+        using var msg = BuildRequestMessage(HttpMethod.Get, "/v6/lives/hots?page=0");
+        using var res = await Send(msg, token);
+        return await ReadJsonContent<LivesResource>(res);
+    }
 
     /// <summary>
     /// Retrieve a single live resource, contains stream url etc.
