@@ -111,6 +111,9 @@ public class PocochaAuthenticationService : TimedBackgroundService
                 // delete processed
                 if (!DebugHelper.IsDebugMode) File.Delete(flowFile); // <-- dry mode?
                 
+                // ensure directory exists
+                Directory.CreateDirectory(pocochaConfiguration.HarArchiveDirectory);
+                
                 var harLocation = Path.Combine(pocochaConfiguration.HarArchiveDirectory, $"{Path.GetFileNameWithoutExtension(flowFile)}.har");
                 _logger.LogInformation("Archiving har at: {HarLocation}", harLocation);
                 
