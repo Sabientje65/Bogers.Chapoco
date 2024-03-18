@@ -64,12 +64,12 @@ public class PocochaAuthenticationService : TimedBackgroundService
         if (!isAuthenticated)
         {
             _logger.LogInformation("Pococha token became invalid");
-            await pushover.SendMessage(PushoverMessage.Text("Pococha token invalidated", "Currently unauthenticated. Please open up the pococha app for a token refresh"));
+            await pushover.SendMessage(PushoverMessage.Text("Pococha authentication", "Became unauthenticated, open pococha to re-authenticate"));
         }
         else
         {
             _logger.LogInformation("Pococha token succesfully updated");
-            await pushover.SendMessage(PushoverMessage.Text("Pococha token updated", "Currently authenticated"));
+            await pushover.SendMessage(PushoverMessage.Text("Pococha authentication", "Became authenticated"));
         }
 
         _wasAuthenticated = isAuthenticated;
