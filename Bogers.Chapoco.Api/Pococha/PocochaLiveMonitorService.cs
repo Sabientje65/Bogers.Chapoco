@@ -5,14 +5,14 @@ namespace Bogers.Chapoco.Api.Pococha;
 /// <summary>
 /// Service for monitoring current followed users live status, sends alerts when a new user goes live
 /// </summary>
-public class PocochaLiveMonitor : TimedBackgroundService
+public class PocochaLiveMonitorService : TimedBackgroundService
 {
     private readonly ILogger _logger;
     
     private readonly IServiceProvider _serviceProvider;
     private readonly ISet<int> _previous = new HashSet<int>();
 
-    public PocochaLiveMonitor(ILogger<PocochaLiveMonitor> logger, IServiceProvider serviceProvider) : base(logger)
+    public PocochaLiveMonitorService(ILogger<PocochaLiveMonitorService> logger, IServiceProvider serviceProvider) : base(logger)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -31,16 +31,16 @@ public class PocochaLiveMonitor : TimedBackgroundService
         {
             _logger.LogInformation("Checking live status of following users");
             
-            var currentlyLive = await pococha.GetCurrentlyLive(stoppingToken);
+            var currentlyLive = await pococha.GetFollowingCurrentlyLive(stoppingToken);
             var currentlyLiveUsers = currentlyLive.LiveResources
-                .Select(x => x.Live.User.Id)
+                .Select(x => x.User.Id)
                 .ToHashSet();
 
             var newLiveUsers = currentlyLiveUsers
                 .Except(_previous)
                 .ToArray();
             
-            _logger.LogInformation("Found {NewLiveUsers} new live users", newLiveUsers);
+            _logger.LogInformation("Found {NewLiveUsers} new live users, currently {CurrentLiveUsers} live", newLiveUsers.Length, newLiveUsers.Length);
                 
             // clear previous run, we'll replace it with our current collection
             _previous.Clear();
@@ -50,11 +50,11 @@ public class PocochaLiveMonitor : TimedBackgroundService
                 _previous.Add(userId);
                     
                 var liveResource = currentlyLive.LiveResources
-                    .First(x => x.Live.User.Id == userId);
+                    .First(x => x.User.Id == userId);
 
                 // todo: link to chapoco.bogers.online
                 await pushover.SendMessage(
-                    PushoverMessage.Text($"{liveResource.Live.User.Name} went live!", liveResource.Live.Title)
+                    PushoverMessage.Text($"{liveResource.User.Name} went live!", liveResource.Live.Title)
                 );
             }
         }

@@ -1,5 +1,6 @@
 ﻿using System.IO.Compression;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Bogers.Chapoco.Api.Pushover;
 using Microsoft.Extensions.Options;
 
@@ -106,9 +107,10 @@ public class PocochaAuthenticationService : TimedBackgroundService
             try
             {
                 _logger.LogInformation("Attempting to update pococha headers from flow file: {FlowFile}", flowFile);
-                
-                var har = await flowParser
-                    .ParseToHar(flowFile); // <-- add ability to filter flows (only requests to pococha?)
+
+                var har = await ReadHar(flowFile);
+                // var har = await flowParser
+                //     .ParseToHar(flowFile); // <-- add ability to filter flows (only requests to pococha?)
                 var didUpdate = pocochaHeaderStore.UpdateFromHar(har);
                 
                 _logger.LogInformation("Cleaning flow file: {FlowFile}", flowFile);
@@ -149,6 +151,34 @@ public class PocochaAuthenticationService : TimedBackgroundService
             {
                 _logger.LogWarning(e, "Failed to process flow file with unknown error: {FlowFile}", flowFile);
             }
+        }
+    }
+
+    private async Task<JsonNode> ReadHar(string file)
+    {
+        return Path.GetExtension(file) switch
+        {
+            ".gz" => await FromGzip(),
+            ".har" => await FromHar(),
+            _ => await FromFlow()
+        };
+
+        async Task<JsonNode> FromGzip()
+        {
+            await using var stream = new GZipStream(File.OpenRead(file), CompressionMode.Decompress, false);
+            return await JsonSerializer.DeserializeAsync<JsonNode>(stream);
+        }
+
+        async Task<JsonNode> FromHar()
+        {
+            await using var stream = File.OpenRead(file);
+            return await JsonSerializer.DeserializeAsync<JsonNode>(stream);
+        }
+
+        async Task<JsonNode> FromFlow()
+        {
+            var flowParser = new MitmFlowParser();
+            return await flowParser.ParseToHar(file);
         }
     }
 }
