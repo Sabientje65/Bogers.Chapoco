@@ -93,12 +93,24 @@ public class PocochaAuthenticationService : TimedBackgroundService
         }
         
         // filenames are assumed to be sortable by date
-        var flowParser = new MitmFlowParser();
         var files = Directory.EnumerateFiles(pocochaConfiguration.FlowsDirectory)
             .OrderBy(f => f)
-            .ToArray();
+            .ToList();
 
-        _logger.LogInformation("Found {FlowFileCount} flow files", files.Length);
+        // during our first run, try to take the last processed file from our archive
+        // this may still contain a valid token
+        if (
+            _isStartup &&
+            Directory.Exists(pocochaConfiguration.HarArchiveDirectory)
+        )
+        {
+            var lastProcessedHar = Directory.EnumerateFiles(pocochaConfiguration.HarArchiveDirectory)
+                .MaxBy(f => f);
+            
+            if (!String.IsNullOrEmpty(lastProcessedHar)) files.Add(lastProcessedHar);
+        }
+
+        _logger.LogInformation("Found {FlowFileCount} flow files", files.Count);
 
         foreach (var flowFile in files)
         {
@@ -109,8 +121,6 @@ public class PocochaAuthenticationService : TimedBackgroundService
                 _logger.LogInformation("Attempting to update pococha headers from flow file: {FlowFile}", flowFile);
 
                 var har = await ReadHar(flowFile);
-                // var har = await flowParser
-                //     .ParseToHar(flowFile); // <-- add ability to filter flows (only requests to pococha?)
                 var didUpdate = pocochaHeaderStore.UpdateFromHar(har);
                 
                 _logger.LogInformation("Cleaning flow file: {FlowFile}", flowFile);
