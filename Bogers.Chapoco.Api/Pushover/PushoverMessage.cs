@@ -1,6 +1,6 @@
 ﻿namespace Bogers.Chapoco.Api.Pushover;
 
-public class PushoverMessage
+public record PushoverMessage
 {
     public string UrlTitle { get; set; }
     public string Url { get; set; }
@@ -8,7 +8,7 @@ public class PushoverMessage
     public string Message { get; set; }
     
     private PushoverMessage() { }
-
+    
     public static PushoverMessage Text(string title, string message) => new PushoverMessage
     {
         Message = message, 

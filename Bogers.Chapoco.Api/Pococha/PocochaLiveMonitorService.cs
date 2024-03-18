@@ -53,9 +53,11 @@ public class PocochaLiveMonitorService : TimedBackgroundService
                     .First(x => x.User.Id == userId);
 
                 // todo: link to chapoco.bogers.online
-                await pushover.SendMessage(
-                    PushoverMessage.Text($"{liveResource.User.Name} went live!", liveResource.Live.Title)
-                );
+                await pushover.SendMessage(PushoverMessage.Text($"{liveResource.User.Name} went live!", liveResource.Live.Title) with
+                {
+                    UrlTitle = "View stream",
+                    Url = $"https://chapoco.bogers.online/view/{liveResource.Live.Id}"
+                });
             }
         }
         catch (TokenExpiredException)

@@ -241,6 +241,8 @@ public class LiveResource
 
 public class Live
 {
+    public int Id { get; set; }
+    
     // [JsonPropertyName("thumbnail_image_url")]
     public string ThumbnailImageUrl { get; set; }
     
