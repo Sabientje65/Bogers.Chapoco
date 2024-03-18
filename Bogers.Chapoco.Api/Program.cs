@@ -89,7 +89,7 @@ app.MapMethods(
                     Expires = DateTime.MaxValue
                 });
                 
-                context.Response.Redirect(returnUrl() ?? "following");
+                context.Response.Redirect(returnUrl() ?? "/following");
                 return;
             }
             
@@ -253,6 +253,31 @@ app.MapGet("/view/{liveId}", async (
             >
                 <source src="{{esc(live.LiveEdge.Ivs.PlaybackUrl)}}" type="application/vnd.apple.mpegurl"></source>
             </video>
+            
+            <form id="comment-form">
+                <label for="comment">Comment</label>
+                <input id="comment" name="Comment" />
+            </form>
+            
+            <script>
+                (function() {
+                    console.log('Initializing comments!');
+                    document.getElementById('comment-form').addEventListener('submit', e => {
+                        e.preventDefault();
+                        
+                        const comment = document.getElementById('comment').value;
+                        fetch('/api/live/{{liveId}}/comment', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                body: comment
+                            }),
+                            headers: {
+                                'content-type': 'application/json'
+                            }
+                        }).then(res => res.text()).then(txt => console.log('Comment result: ' + txt));
+                    });
+                })();
+            </script>
         </body>
     </html>
     """;
@@ -260,7 +285,15 @@ app.MapGet("/view/{liveId}", async (
     string esc(string input) => HtmlEncoder.Default.Encode(input);
 });
 
+app.MapPost("/api/live/{liveId}/comment", async (
+    [FromRoute] int liveId,
+    [FromBody] CommentModel comment,
+    [FromServices] PocochaClient pococha
+) => await pococha.Proxy("POST", $"/v2/lives/{liveId}/comments", comment));
+
 app.Run();
+
+record CommentModel(string Body);
 
 class AppAuthenticationService
 {
@@ -284,5 +317,12 @@ class AppAuthenticationService
     /// </summary>
     /// <param name="tokenOrPassword">Token</param>
     /// <returns>True when token is valid</returns>
-    public bool IsValid(string tokenOrPassword) => tokenOrPassword == Token || tokenOrPassword == _configuration.Password;
+    public bool IsValid(string tokenOrPassword)
+    {
+        #if DEBUG
+        return true;
+        #endif
+        
+        return tokenOrPassword == Token || tokenOrPassword == _configuration.Password;
+    }
 }

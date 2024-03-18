@@ -150,8 +150,14 @@ public class PocochaClient : IDisposable
 
         if (body != null)
         {
-            msg.Content = new StringContent(JsonSerializer.Serialize(body));
-            msg.Headers.TryAddWithoutValidation("Content-Type", "application/json");
+            var json = JsonSerializer.SerializeToNode(body, PocochaJsonSerializerOptions)!.AsObject();
+            var content = new Dictionary<string, string>();
+
+            foreach (var (key, value) in json) content[key] = value!.ToString();
+            
+            // pococha uses formurlencodedcontent for at least comments
+            msg.Content = new FormUrlEncodedContent(content);
+            msg.Headers.TryAddWithoutValidation("Content-Type", "application/x-www-form-urlencoded");
         }
 
         return msg;
