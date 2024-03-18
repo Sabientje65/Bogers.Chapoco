@@ -317,12 +317,5 @@ class AppAuthenticationService
     /// </summary>
     /// <param name="tokenOrPassword">Token</param>
     /// <returns>True when token is valid</returns>
-    public bool IsValid(string tokenOrPassword)
-    {
-        #if DEBUG
-        return true;
-        #endif
-        
-        return tokenOrPassword == Token || tokenOrPassword == _configuration.Password;
-    }
+    public bool IsValid(string tokenOrPassword) => tokenOrPassword == Token || tokenOrPassword == _configuration.Password;
 }
