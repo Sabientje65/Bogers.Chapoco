@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using Bogers.Chapoco.Api.Pococha;
 using Bogers.Chapoco.Api.Pushover;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Console;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,8 +17,11 @@ builder.Services
     .AddHostedService<PocochaLiveMonitor>()
     ;
 
-builder.Logging
-    .AddConsole();
+builder.Logging.AddSimpleConsole(opts => {
+    opts.SingleLine = true;
+    opts.ColorBehavior = LoggerColorBehavior.Enabled;
+    opts.TimestampFormat = "[yyyy-MM-dd hh:mm:ss]";
+});
 
 
 builder.Services.AddOptions<PushoverConfiguration>()

@@ -7,7 +7,7 @@ namespace Bogers.Chapoco.Api.Pushover;
 /// <summary>
 /// Service for sending notifications via pushover
 /// </summary>
-public class PushoverClient
+public class PushoverClient : IDisposable
 {
     private readonly ILogger _logger;
     
@@ -70,5 +70,10 @@ public class PushoverClient
         {
             throw new Exception("Invalid pushover configuration! Missing either AppToken, or UserToken");
         }
+    }
+
+    public void Dispose()
+    {
+        _client.Dispose();
     }
 }

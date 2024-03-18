@@ -1,4 +1,6 @@
-﻿using Bogers.Chapoco.Api.Pushover;
+﻿using System.IO.Compression;
+using System.Text.Json;
+using Bogers.Chapoco.Api.Pushover;
 using Microsoft.Extensions.Options;
 
 namespace Bogers.Chapoco.Api.Pococha;
@@ -104,22 +106,34 @@ public class PocochaAuthenticationService : TimedBackgroundService
                 
                 var har = await flowParser
                     .ParseToHar(flowFile); // <-- add ability to filter flows (only requests to pococha?)
-                pocochaHeaderStore.UpdateFromHar(har);
+                var didUpdate = pocochaHeaderStore.UpdateFromHar(har);
                 
                 _logger.LogInformation("Cleaning flow file: {FlowFile}", flowFile);
                 
                 // delete processed
-                if (!DebugHelper.IsDebugMode) File.Delete(flowFile); // <-- dry mode?
+                try
+                {
+                    File.Delete(flowFile); // <-- dry mode?
+                    
+                    // ensure directory exists
+                    Directory.CreateDirectory(pocochaConfiguration.HarArchiveDirectory);
                 
-                // ensure directory exists
-                Directory.CreateDirectory(pocochaConfiguration.HarArchiveDirectory);
+                    var harLocation = Path.Combine(pocochaConfiguration.HarArchiveDirectory, $"{Path.GetFileNameWithoutExtension(flowFile)}.har.gz");
+                    _logger.LogInformation("Archiving har at: {HarLocation}", harLocation);
                 
-                var harLocation = Path.Combine(pocochaConfiguration.HarArchiveDirectory, $"{Path.GetFileNameWithoutExtension(flowFile)}.har");
-                _logger.LogInformation("Archiving har at: {HarLocation}", harLocation);
-                
-                // todo: automatically clean old files
-                // should we gzip our hars?
-                if (!DebugHelper.IsDebugMode) await File.WriteAllTextAsync(harLocation, har.ToString());
+                    // todo: automatically clean old files
+                    if (didUpdate)
+                    {
+                        await using var gzip = new GZipStream(File.Create(harLocation), CompressionLevel.SmallestSize, false);
+                        await JsonSerializer.SerializeAsync(gzip, har);
+                        await gzip.FlushAsync();
+                    }
+                }
+                catch(Exception)
+                {
+                    // likely still in use
+                    _logger.LogInformation("Failed to clean flow file: {FlowFile}, likely still in use", flowFile);
+                }
 
                 // send pushover notification on successful update?
             }

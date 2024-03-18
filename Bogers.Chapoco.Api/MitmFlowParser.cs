@@ -30,7 +30,7 @@ class MitmFlowParser
         using var gracefulCls = new CancellationTokenSource();
         var gracefulToken = gracefulCls.Token;
         
-        // give mitmdump a default of 2500ms to produce output, after that we'll be waiting in intervals of 150ms
+        // give mitmdump a decent timeframe to produce output, after that we'll be waiting in intervals of 150ms
         // if no output is written anymore, we gracefully terminate
         // allowing us to capture the har output written to stdout by mitmdump
         gracefulCls.CancelAfter(TimeSpan.FromSeconds(5));

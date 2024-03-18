@@ -8,7 +8,7 @@ namespace Bogers.Chapoco.Api.Pococha;
 /// <summary>
 /// Service for interacting with Pococha
 /// </summary>
-public class PocochaClient
+public class PocochaClient : IDisposable
 {
     private readonly ILogger _logger;
     
@@ -127,8 +127,10 @@ public class PocochaClient
 
     private async Task<T> ReadJsonContent<T>(HttpResponseMessage res)
     {
+        var responseStream = await AsJsonDeserializableStream();
+        
         return await JsonSerializer.DeserializeAsync<T>(
-            await AsJsonDeserializableStream(),
+            responseStream,
             PocochaJsonSerializerOptions    
         );
 
@@ -186,6 +188,11 @@ public class PocochaClient
         }
 
         return response;
+    }
+
+    public void Dispose()
+    {
+        _client.Dispose();
     }
 }
 
