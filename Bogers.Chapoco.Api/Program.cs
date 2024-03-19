@@ -43,8 +43,13 @@ app.UseHttpsRedirection();
 
 app.Use(async (context, next) =>
 {
+    var authDisabled = context.RequestServices.GetRequiredService<IOptions<AuthenticationConfiguration>>().Value.Disabled;
+    
     // logging in, continue with request
-    if (context.Request.Path.Equals("/login"))
+    if (
+        authDisabled ||
+        context.Request.Path.Equals("/login")
+    )
     {
         await next();
         return;
