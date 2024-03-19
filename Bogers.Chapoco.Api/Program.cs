@@ -29,6 +29,8 @@ builder.Logging.AddSimpleConsole(opts => {
     opts.TimestampFormat = "[yyyy-MM-dd hh:mm:ss]";
 });
 
+// add filewatcher
+builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
 builder.Services.AddOptions<PushoverConfiguration>()
     .BindConfiguration("Pushover");

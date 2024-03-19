@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using System.IO;
 
 namespace Bogers.Chapoco.Api;
 
@@ -18,5 +19,5 @@ public class PathHelper
     /// </summary>
     /// <param name="path">Path to strip extensions from</param>
     /// <returns>Path without extensions</returns>
-    public static string StripExtensions(string path) => path.Split('.')[0];
+    public static string GetFileNameWithoutExtensions(string path) => Path.GetFileName(path).Split('.')[0];
 }
