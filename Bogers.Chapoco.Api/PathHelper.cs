@@ -1,4 +1,6 @@
-﻿namespace Bogers.Chapoco.Api;
+﻿using System.Text.RegularExpressions;
+
+namespace Bogers.Chapoco.Api;
 
 public class PathHelper
 {
@@ -10,4 +12,11 @@ public class PathHelper
     public static string Normalize(string path) => path
         .Replace('/', Path.DirectorySeparatorChar)
         .Replace('\\', Path.DirectorySeparatorChar);
+
+    /// <summary>
+    /// Strip all extensions from the given path, foo.bar.baz -> foo
+    /// </summary>
+    /// <param name="path">Path to strip extensions from</param>
+    /// <returns>Path without extensions</returns>
+    public static string StripExtensions(string path) => path.Split('.')[0];
 }

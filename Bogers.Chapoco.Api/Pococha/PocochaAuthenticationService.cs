@@ -133,7 +133,7 @@ public class PocochaAuthenticationService : TimedBackgroundService
                     // ensure directory exists
                     Directory.CreateDirectory(pocochaConfiguration.HarArchiveDirectory);
                 
-                    var harLocation = Path.Combine(pocochaConfiguration.HarArchiveDirectory, $"{Path.GetFileNameWithoutExtension(flowFile)}.har.gz");
+                    var harLocation = Path.Combine(pocochaConfiguration.HarArchiveDirectory, $"{PathHelper.StripExtensions(flowFile)}.har.gz");
                     _logger.LogInformation("Archiving har at: {HarLocation}", harLocation);
                 
                     // todo: automatically clean old files
