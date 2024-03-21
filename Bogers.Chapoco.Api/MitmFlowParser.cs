@@ -67,7 +67,14 @@ class MitmFlowParser
             if (!String.IsNullOrEmpty(err)) throw new ApplicationException($"mitmdump failed: {errBuilder}");
             
             var har = harBuilder.ToString();
-            if (!String.IsNullOrEmpty(har)) return JsonNode.Parse(har)!;
+            try
+            {
+                if (!String.IsNullOrEmpty(har)) return JsonNode.Parse(har)!;
+            }
+            catch (Exception)
+            {
+                throw new ApplicationException($"mitmdump failed, unable to parse json: {har}");
+            }
             
             throw new ApplicationException("mitm dump failed", e); // bubble when something else occurred
         }
