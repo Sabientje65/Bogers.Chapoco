@@ -96,6 +96,8 @@ public class PocochaAuthenticationService : TimedBackgroundService
         var files = Directory.EnumerateFiles(pocochaConfiguration.FlowsDirectory)
             .OrderBy(f => f)
             .ToList();
+        
+        var lastProcessedHar = String.Empty;
 
         // during our first run, try to take the last processed file from our archive
         // this may still contain a valid token
@@ -104,7 +106,7 @@ public class PocochaAuthenticationService : TimedBackgroundService
             Directory.Exists(pocochaConfiguration.HarArchiveDirectory)
         )
         {
-            var lastProcessedHar = Directory.EnumerateFiles(pocochaConfiguration.HarArchiveDirectory)
+            lastProcessedHar = Directory.EnumerateFiles(pocochaConfiguration.HarArchiveDirectory)
                 .MaxBy(f => f);
             
             if (!String.IsNullOrEmpty(lastProcessedHar)) files.Add(lastProcessedHar);
@@ -142,7 +144,7 @@ public class PocochaAuthenticationService : TimedBackgroundService
             {
                 // always clean, if we failed to process a file, so be it
                 // flow files are expected to come in at a non-infrequent rate
-                CleanFlowFile(flowFile);
+                if (flowFile != lastProcessedHar) CleanFlowFile(flowFile);
             }
         }
     }
