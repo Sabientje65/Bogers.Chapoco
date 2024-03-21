@@ -120,6 +120,8 @@ public class PocochaAuthenticationService : TimedBackgroundService
             {
                 _logger.LogInformation("Attempting to update pococha headers from flow file: {FlowFile}", flowFile);
 
+                // https://docs.mitmproxy.org/stable/concepts-filters/
+                // ~d pococha.com <-- take only for domain `pococha.com`
                 var har = await ReadHar(flowFile);
                 var didUpdate = pocochaHeaderStore.UpdateFromHar(har);
                 
