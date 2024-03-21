@@ -37,11 +37,18 @@ class MitmFlowParser
 
         var cmd = Cli.Wrap("mitmdump")
             .WithArguments(["-nr", path, "--set", "hardump=-"])
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(_ =>
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(buffer =>
             {
                 if (gracefulCls.IsCancellationRequested)
                 {
-                    harBuilder.Append(_);
+                    var isFirstWrite = buffer.Length == 0;
+                    
+                    // should reduce errors: ignore everything until first `{`
+                    // buffer may still contain some output from write prior to us sending signint
+                    if (isFirstWrite && buffer.IndexOf('{') == -1) return;
+                    buffer = buffer.Substring(buffer.IndexOf('{'));
+                    
+                    harBuilder.Append(buffer);
                     return;
                 }
 
