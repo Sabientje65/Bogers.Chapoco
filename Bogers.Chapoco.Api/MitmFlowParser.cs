@@ -63,11 +63,11 @@ class MitmFlowParser
         }
         catch (OperationCanceledException e)
         {
-            var har = harBuilder.ToString();
-            if (!String.IsNullOrEmpty(har)) return JsonNode.Parse(har)!;
-            
             var err = errBuilder.ToString();
             if (!String.IsNullOrEmpty(err)) throw new ApplicationException($"mitmdump failed: {errBuilder}");
+            
+            var har = harBuilder.ToString();
+            if (!String.IsNullOrEmpty(har)) return JsonNode.Parse(har)!;
             
             throw new ApplicationException("mitm dump failed", e); // bubble when something else occurred
         }

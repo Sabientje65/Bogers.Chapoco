@@ -124,51 +124,61 @@ public class PocochaAuthenticationService : TimedBackgroundService
                 // ~d pococha.com <-- take only for domain `pococha.com`
                 var har = await ReadHar(flowFile);
                 var didUpdate = pocochaHeaderStore.UpdateFromHar(har);
+                if (didUpdate) await ArchiveHar(pocochaConfiguration.HarArchiveDirectory, flowFile, har);
                 
-                _logger.LogInformation("Cleaning flow file: {FlowFile}", flowFile);
-                
-                // delete processed
-                try
-                {
-                    File.Delete(flowFile); // <-- dry mode?
-                    
-                    // ensure directory exists
-                    Directory.CreateDirectory(pocochaConfiguration.HarArchiveDirectory);
-                
-                    // todo: automatically clean old files
-                    if (didUpdate) await ArchiveHar(pocochaConfiguration.HarArchiveDirectory, flowFile, har);
-                }
-                catch(Exception)
-                {
-                    // likely still in use
-                    _logger.LogInformation("Failed to clean flow file: {FlowFile}, likely still in use", flowFile);
-                }
-
-                // send pushover notification on successful update?
+                // todo: automatically clean old files
             }
-            catch (ApplicationException e) {
+            catch (ApplicationException e)
+            {
                 _logger.LogWarning(e, "Failed to parse flowfile to har: {FlowFile}", flowFile);
-                
+
                 // should likely still attempt to delete, lets just see how this plays out in production
             }
             catch (Exception e)
             {
                 _logger.LogWarning(e, "Failed to process flow file with unknown error: {FlowFile}", flowFile);
             }
+            finally
+            {
+                // always clean, if we failed to process a file, so be it
+                // flow files are expected to come in at a non-infrequent rate
+                CleanFlowFile(flowFile);
+            }
+        }
+    }
+
+    private void CleanFlowFile(string flowFile)
+    {
+        try
+        {
+            _logger.LogInformation("Cleaning flow file: {FlowFile}", flowFile);
+            File.Delete(flowFile); // <-- dry mode?
+        }
+        catch (Exception e)
+        {
+            _logger.LogInformation("Failed to clean flow file: {FlowFile}, likely still in use", flowFile);
         }
     }
 
     private async Task ArchiveHar(string archiveDirectory, string flowFile, JsonNode har)
     {
-        // ensure directory exists
-        Directory.CreateDirectory(archiveDirectory);
-                
         var harLocation = Path.Combine(archiveDirectory, $"{PathHelper.GetFileNameWithoutExtensions(flowFile)}.har.gz");
-        _logger.LogInformation("Archiving har at: {HarLocation}", harLocation);
         
-        await using var gzip = new GZipStream(File.Create(harLocation), CompressionLevel.SmallestSize, false);
-        await JsonSerializer.SerializeAsync(gzip, har);
-        await gzip.FlushAsync();
+        try
+        {
+            // ensure directory exists
+            Directory.CreateDirectory(archiveDirectory);
+            
+            _logger.LogInformation("Archiving har at: {HarLocation}", harLocation);
+
+            await using var gzip = new GZipStream(File.Create(harLocation), CompressionLevel.SmallestSize, false);
+            await JsonSerializer.SerializeAsync(gzip, har);
+            await gzip.FlushAsync();
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Failed to archive {FlowFile} to {harLocation}", flowFile, harLocation);
+        }
     }
 
     private async Task<JsonNode> ReadHar(string file)
