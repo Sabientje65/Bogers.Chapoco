@@ -135,16 +135,8 @@ public class PocochaAuthenticationService : TimedBackgroundService
                     // ensure directory exists
                     Directory.CreateDirectory(pocochaConfiguration.HarArchiveDirectory);
                 
-                    var harLocation = Path.Combine(pocochaConfiguration.HarArchiveDirectory, $"{PathHelper.GetFileNameWithoutExtensions(flowFile)}.har.gz");
-                    _logger.LogInformation("Archiving har at: {HarLocation}", harLocation);
-                
                     // todo: automatically clean old files
-                    if (didUpdate)
-                    {
-                        await using var gzip = new GZipStream(File.Create(harLocation), CompressionLevel.SmallestSize, false);
-                        await JsonSerializer.SerializeAsync(gzip, har);
-                        await gzip.FlushAsync();
-                    }
+                    if (didUpdate) await ArchiveHar(pocochaConfiguration.HarArchiveDirectory, flowFile, har);
                 }
                 catch(Exception)
                 {
@@ -164,6 +156,19 @@ public class PocochaAuthenticationService : TimedBackgroundService
                 _logger.LogWarning(e, "Failed to process flow file with unknown error: {FlowFile}", flowFile);
             }
         }
+    }
+
+    private async Task ArchiveHar(string archiveDirectory, string flowFile, JsonNode har)
+    {
+        // ensure directory exists
+        Directory.CreateDirectory(archiveDirectory);
+                
+        var harLocation = Path.Combine(archiveDirectory, $"{PathHelper.GetFileNameWithoutExtensions(flowFile)}.har.gz");
+        _logger.LogInformation("Archiving har at: {HarLocation}", harLocation);
+        
+        await using var gzip = new GZipStream(File.Create(harLocation), CompressionLevel.SmallestSize, false);
+        await JsonSerializer.SerializeAsync(gzip, har);
+        await gzip.FlushAsync();
     }
 
     private async Task<JsonNode> ReadHar(string file)
