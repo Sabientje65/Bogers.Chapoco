@@ -45,8 +45,10 @@ class MitmFlowParser
                     
                     // should reduce errors: ignore everything until first `{`
                     // buffer may still contain some output from write prior to us sending signint
-                    if (isFirstWrite && buffer.IndexOf('{') == -1) return;
-                    buffer = buffer.Substring(buffer.IndexOf('{'));
+                    if (isFirstWrite) {
+                        if (buffer.IndexOf('{') == -1) return;
+                        buffer = buffer.Substring(buffer.IndexOf('{'));
+                    }
                     
                     harBuilder.Append(buffer);
                     return;
