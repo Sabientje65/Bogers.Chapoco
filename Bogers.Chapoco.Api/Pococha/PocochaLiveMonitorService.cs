@@ -1,4 +1,6 @@
-﻿using Bogers.Chapoco.Api.Pushover;
+﻿using System.Net;
+using System.Net.Mime;
+using Bogers.Chapoco.Api.Pushover;
 
 namespace Bogers.Chapoco.Api.Pococha;
 
@@ -52,12 +54,21 @@ public class PocochaLiveMonitorService : TimedBackgroundService
                 var liveResource = currentlyLive.LiveResources
                     .First(x => x.User.Id == userId);
 
-                // todo: link to chapoco.bogers.online
-                await pushover.SendMessage(PushoverMessage.Text($"{liveResource.User.Name} went live!", liveResource.Live.Title) with
+                var notification = PushoverMessage.Text($"{liveResource.User.Name} went live!", liveResource.Live.Title)
+                    .WithUrl($"https://chapoco.bogers.online/view/{liveResource.Live.Id}", "View Stream");
+
+                try
                 {
-                    UrlTitle = "View stream",
-                    Url = $"https://chapoco.bogers.online/view/{liveResource.Live.Id}"
-                });
+                    var (thumbnailContent, thumbnailMimeType) = await DownloadThumbnail(liveResource);
+                    notification = notification.WithImage(thumbnailContent, thumbnailMimeType);
+                }
+                catch
+                {
+                    // swallow
+                }
+                
+                
+                await pushover.SendMessage(notification);
             }
         }
         catch (TokenExpiredException)
@@ -68,6 +79,31 @@ public class PocochaLiveMonitorService : TimedBackgroundService
         {
             // log
             _logger.LogWarning(e, "Failed to retrieve live users");
+        }
+    }
+
+    private async Task<(byte[] content, string mimeType)> DownloadThumbnail(LiveResource liveResource)
+    {
+        _logger.LogDebug("Attempting to download thumbnail for live: {LiveId}", liveResource.Live.Id);
+
+        // low timeout - thumbnail simply not important
+        using var client = new HttpClient();
+        client.Timeout = TimeSpan.FromSeconds(3);
+
+        try
+        {
+            using var res = await client.GetAsync(liveResource.Live.ThumbnailImageUrl);
+            return (
+                await res.Content.ReadAsByteArrayAsync(),
+                res.Headers.TryGetValues("Content-Type", out var contentType)
+                    ? contentType.ToString()
+                    : "image/png" // assume png for now, easy
+            );
+        }
+        catch
+        {
+            _logger.LogWarning("Failed to download thumbnail for live: {LiveId} from {LiveThumbnail}", liveResource.Live.Id, liveResource.Live.ThumbnailImageUrl);
+            throw;
         }
     }
 }
