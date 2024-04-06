@@ -95,8 +95,13 @@ app.MapMethods(
                     SameSite = SameSiteMode.Strict,
                     Expires = DateTime.MaxValue
                 });
+
+                context.Response.Redirect(
+                    String.IsNullOrEmpty(returnUrl()) ? 
+                        "/following" : 
+                        returnUrl()
+                );
                 
-                context.Response.Redirect(returnUrl() ?? "/following");
                 return;
             }
             
